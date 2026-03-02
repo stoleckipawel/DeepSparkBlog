@@ -48,7 +48,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
 <div class="fg-reveal" style="position:relative;margin:1.4em 0;">
 
   <div style="margin-bottom:1.6em;">
-    <div style="font-weight:800;font-size:1.05em;color:color-mix(in srgb, var(--ds-success) 60%, currentColor);margin-bottom:.3em;">Month 1: 3 passes, everything's fine</div>
+    <div style="font-weight:800;font-size:1.05em;color:var(--ds-success);margin-bottom:.3em;">Month 1: 3 passes, everything's fine</div>
     <div style="font-size:.92em;line-height:1.6;">
       Depth prepass → GBuffer → lighting. Two barriers, hand-placed. Two textures, both allocated at init. Code is clean, readable, correct.
     </div>
@@ -58,7 +58,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
   </div>
 
   <div style="margin-bottom:1.6em;">
-    <div style="font-weight:800;font-size:1.05em;color:color-mix(in srgb, var(--ds-warn) 60%, currentColor);margin-bottom:.3em;">Month 6: 12 passes, cracks appear</div>
+    <div style="font-weight:800;font-size:1.05em;color:var(--ds-warn);margin-bottom:.3em;">Month 6: 12 passes, cracks appear</div>
     <div style="font-size:.92em;line-height:1.6;">
       Same renderer, now with SSAO, SSR, bloom, TAA, shadow cascades. Three things going wrong simultaneously:
     </div>
@@ -79,7 +79,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
   </div>
 
   <div>
-    <div style="font-weight:800;font-size:1.05em;color:color-mix(in srgb, var(--ds-danger) 60%, currentColor);margin-bottom:.3em;">Month 18: 25 passes, nobody touches it</div>
+    <div style="font-weight:800;font-size:1.05em;color:var(--ds-danger);margin-bottom:.3em;">Month 18: 25 passes, nobody touches it</div>
     <div style="font-size:.92em;line-height:1.6;margin-bottom:.5em;">The renderer works, but:</div>
     <div style="display:grid;gap:.4em;">
       <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.10);background:rgba(var(--ds-danger-rgb),.02);font-size:.88em;line-height:1.5;">
@@ -251,7 +251,7 @@ Virtual resources fall into two categories:
       <strong>Lifetime:</strong> single frame, created and destroyed within the graph<br>
       <strong>Declared as:</strong> descriptor (size, format, usage flags)<br>
       <strong>GPU memory:</strong> allocated at compile, freed at frame end<br>
-      <strong>Aliasable:</strong> <span style="color:color-mix(in srgb, var(--ds-success) 60%, currentColor);font-weight:700;">Yes</span>. Non-overlapping lifetimes share physical memory.<br>
+      <strong>Aliasable:</strong> <span style="color:var(--ds-success);font-weight:700;">Yes</span>. Non-overlapping lifetimes share physical memory.<br>
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
   </div>
@@ -261,7 +261,7 @@ Virtual resources fall into two categories:
       <strong>Lifetime:</strong> spans multiple frames, owned by an external system<br>
       <strong>Declared as:</strong> existing GPU handle registered into the graph<br>
       <strong>GPU memory:</strong> already allocated. The graph only tracks state.<br>
-      <strong>Aliasable:</strong> <span style="color:color-mix(in srgb, var(--ds-danger) 60%, currentColor);font-weight:700;">No</span>. Lifetime extends beyond the frame.<br>
+      <strong>Aliasable:</strong> <span style="color:var(--ds-danger);font-weight:700;">No</span>. Lifetime extends beyond the frame.<br>
       <strong>Examples:</strong> backbuffer, TAA history, shadow atlas, blue noise LUT
     </div>
   </div>

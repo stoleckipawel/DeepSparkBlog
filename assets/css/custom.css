@@ -455,11 +455,11 @@ html {
   font-weight: 800;
   font-size: .95em;
 }
-.ds-card-header--info    { background: rgba(var(--ds-info-rgb), .04);    border-bottom: 1px solid rgba(var(--ds-info-rgb), .08);    color: color-mix(in srgb, var(--ds-info-light) 65%, currentColor); }
-.ds-card-header--code    { background: rgba(var(--ds-code-rgb), .04);    border-bottom: 1px solid rgba(var(--ds-code-rgb), .08);    color: color-mix(in srgb, var(--ds-code-light) 65%, currentColor); }
-.ds-card-header--success { background: rgba(var(--ds-success-rgb), .08); border-bottom: 1px solid rgba(var(--ds-success-rgb), .15); color: var(--ds-success); }
-.ds-card-header--warn    { background: rgba(var(--ds-warn-rgb), .08);    border-bottom: 1px solid rgba(var(--ds-warn-rgb), .15);    color: var(--ds-warn); }
-.ds-card-header--danger  { background: rgba(var(--ds-danger-rgb), .08);  border-bottom: 1px solid rgba(var(--ds-danger-rgb), .15);  color: var(--ds-danger); }
+.ds-card-header--info    { background: rgba(var(--ds-info-rgb), .04);    border-bottom: 1px solid rgba(var(--ds-info-rgb), .08);    color: var(--ds-info-light); }
+.ds-card-header--code    { background: rgba(var(--ds-code-rgb), .04);    border-bottom: 1px solid rgba(var(--ds-code-rgb), .08);    color: var(--ds-code-light); }
+.ds-card-header--success { background: rgba(var(--ds-success-rgb), .05); border-bottom: 1px solid rgba(var(--ds-success-rgb), .10); color: var(--ds-success); }
+.ds-card-header--warn    { background: rgba(var(--ds-warn-rgb), .05);    border-bottom: 1px solid rgba(var(--ds-warn-rgb), .10);    color: var(--ds-warn); }
+.ds-card-header--danger  { background: rgba(var(--ds-danger-rgb), .05);  border-bottom: 1px solid rgba(var(--ds-danger-rgb), .10);  color: var(--ds-danger); }
 
 .ds-card-body {
   padding: .7em .9em;
@@ -656,6 +656,30 @@ main > section {
 @keyframes ds-fade-up {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Article-scoped softer semantic palette ──────────────────
+   Reduce saturation inside articles so colour supports — not
+   dominates — the content.  Mixes each token ~35 % toward gray. */
+.article-content {
+  --ds-success:       color-mix(in srgb, #22c55e 65%, #888);
+  --ds-success-dark:  color-mix(in srgb, #16a34a 65%, #777);
+  --ds-success-light: color-mix(in srgb, #4ade80 65%, #999);
+  --ds-danger:        color-mix(in srgb, #ef4444 65%, #888);
+  --ds-danger-dark:   color-mix(in srgb, #dc2626 65%, #777);
+  --ds-warn:          color-mix(in srgb, #f59e0b 65%, #888);
+  --ds-warn-dark:     color-mix(in srgb, #d97706 65%, #777);
+  --ds-warn-light:    color-mix(in srgb, #fbbf24 65%, #999);
+  --ds-info:          color-mix(in srgb, #3b82f6 65%, #888);
+  --ds-info-dark:     color-mix(in srgb, #2563eb 65%, #777);
+  --ds-info-light:    color-mix(in srgb, #60a5fa 65%, #999);
+  --ds-code:          color-mix(in srgb, #8b5cf6 65%, #888);
+  --ds-code-dark:     color-mix(in srgb, #7c3aed 65%, #777);
+  --ds-code-light:    color-mix(in srgb, #a78bfa 65%, #999);
+  --ds-indigo:        color-mix(in srgb, #6366f1 65%, #888);
+  --ds-indigo-light:  color-mix(in srgb, #818cf8 65%, #999);
+  --ds-pink:          color-mix(in srgb, #ec4899 65%, #888);
+  --ds-teal:          color-mix(in srgb, #14b8a6 65%, #888);
 }
 
 /* ── Heading hierarchy (UE-docs inspired: clean, generous) ── */

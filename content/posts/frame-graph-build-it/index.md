@@ -96,9 +96,9 @@ We start from the API you *want* to write, then build toward it, starting with b
 
 <!-- UML class diagram, API overview -->
 <div style="display:flex;justify-content:center;gap:1.8em;margin:0 0 .5em;font-size:.78em;font-weight:600;opacity:.85;">
-  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #d97706;"></span> v1: Scaffold</span>
-  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #6366f1;"></span> v2: Dependencies</span>
-  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #16a34a;"></span> v3: Aliasing</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid var(--ds-warn-dark);"></span> v1: Scaffold</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid var(--ds-indigo);"></span> v2: Dependencies</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid var(--ds-success-dark);"></span> v3: Aliasing</span>
 </div>
 {{< mermaid >}}
 classDiagram
