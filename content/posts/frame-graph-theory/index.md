@@ -19,8 +19,6 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
 📖 <strong>Part I of IV.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
----
-
 Behind every smooth frame is a brutal scheduling problem: which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
 
 <div class="fg-reveal" data-keep-emoji="true" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
@@ -50,7 +48,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
 <div class="fg-reveal" style="position:relative;margin:1.4em 0;">
 
   <div style="margin-bottom:1.6em;">
-    <div style="font-weight:800;font-size:1.05em;color:var(--ds-success);margin-bottom:.3em;">Month 1: 3 passes, everything's fine</div>
+    <div style="font-weight:800;font-size:1.05em;color:color-mix(in srgb, var(--ds-success) 60%, currentColor);margin-bottom:.3em;">Month 1: 3 passes, everything's fine</div>
     <div style="font-size:.92em;line-height:1.6;">
       Depth prepass → GBuffer → lighting. Two barriers, hand-placed. Two textures, both allocated at init. Code is clean, readable, correct.
     </div>
@@ -60,18 +58,18 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
   </div>
 
   <div style="margin-bottom:1.6em;">
-    <div style="font-weight:800;font-size:1.05em;color:var(--ds-warn);margin-bottom:.3em;">Month 6: 12 passes, cracks appear</div>
+    <div style="font-weight:800;font-size:1.05em;color:color-mix(in srgb, var(--ds-warn) 60%, currentColor);margin-bottom:.3em;">Month 6: 12 passes, cracks appear</div>
     <div style="font-size:.92em;line-height:1.6;">
       Same renderer, now with SSAO, SSR, bloom, TAA, shadow cascades. Three things going wrong simultaneously:
     </div>
     <div style="margin-top:.5em;display:grid;gap:.4em;">
-      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.10);background:rgba(var(--ds-warn-rgb),.02);font-size:.88em;line-height:1.5;">
         <strong>Invisible dependencies:</strong> someone adds SSAO but doesn't realize GBuffer needs an updated barrier. Visual artifacts on fresh build.
       </div>
-      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.10);background:rgba(var(--ds-warn-rgb),.02);font-size:.88em;line-height:1.5;">
         <strong>Wasted memory:</strong> SSAO and bloom textures never overlap, but aliasing them means auditing every pass that might touch them. Nobody does it.
       </div>
-      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.10);background:rgba(var(--ds-warn-rgb),.02);font-size:.88em;line-height:1.5;">
         <strong>Silent reordering:</strong> two branches touch the render loop. Git merges cleanly, but the shadow pass ends up after lighting. Subtly wrong output ships unnoticed.
       </div>
     </div>
@@ -81,16 +79,16 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
   </div>
 
   <div>
-    <div style="font-weight:800;font-size:1.05em;color:var(--ds-danger);margin-bottom:.3em;">Month 18: 25 passes, nobody touches it</div>
+    <div style="font-weight:800;font-size:1.05em;color:color-mix(in srgb, var(--ds-danger) 60%, currentColor);margin-bottom:.3em;">Month 18: 25 passes, nobody touches it</div>
     <div style="font-size:.92em;line-height:1.6;margin-bottom:.5em;">The renderer works, but:</div>
     <div style="display:grid;gap:.4em;">
-      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.10);background:rgba(var(--ds-danger-rgb),.02);font-size:.88em;line-height:1.5;">
         <strong>900 MB VRAM.</strong> Profiling shows 400 MB is aliasable, but the lifetime analysis would take a week and break the next time anyone adds a pass.
       </div>
-      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.10);background:rgba(var(--ds-danger-rgb),.02);font-size:.88em;line-height:1.5;">
         <strong>47 barrier calls.</strong> Three are redundant, two are missing, one is in the wrong queue. Nobody knows which.
       </div>
-      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.10);background:rgba(var(--ds-danger-rgb),.02);font-size:.88em;line-height:1.5;">
         <strong>2 days to add a new pass.</strong> 30 minutes for the shader, the rest to figure out where to slot it and what barriers it needs.
       </div>
     </div>
@@ -101,36 +99,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
 
 </div>
 
-<div class="diagram-bars" style="grid-template-columns:110px 1fr 1fr 1fr;gap:0.3em 0.6em;font-size:.8em">
-  <div class="db-label"></div>
-  <div style="font-weight:700;text-align:center">Month 1</div>
-  <div style="font-weight:700;text-align:center">Month 6</div>
-  <div style="font-weight:700;text-align:center">Month 18</div>
-  <div class="db-label">Passes</div>
-  <div><div class="db-bar" style="width:12%;min-width:18px"></div><span class="db-val">3</span></div>
-  <div><div class="db-bar db-warn" style="width:48%"></div><span class="db-val">12</span></div>
-  <div><div class="db-bar db-danger" style="width:100%"></div><span class="db-val">25</span></div>
-  <div class="db-label">Barriers</div>
-  <div><div class="db-bar" style="width:4%;min-width:18px"></div><span class="db-val">2</span></div>
-  <div><div class="db-bar db-warn" style="width:38%"></div><span class="db-val">18</span></div>
-  <div><div class="db-bar db-danger" style="width:100%"></div><span class="db-val">47</span></div>
-  <div class="db-label">VRAM</div>
-  <div><div class="db-bar" style="width:4%;min-width:18px"></div><span class="db-val">~40 MB</span></div>
-  <div><div class="db-bar db-warn" style="width:42%"></div><span class="db-val">380 MB</span></div>
-  <div><div class="db-bar db-danger" style="width:100%"></div><span class="db-val">900 MB</span></div>
-  <div class="db-label">Aliasable</div>
-  <div><div class="db-bar" style="width:0%;min-width:3px;opacity:.3"></div><span class="db-val">0</span></div>
-  <div><div class="db-bar db-warn" style="width:20%"></div><span class="db-val">~80 MB</span></div>
-  <div><div class="db-bar db-danger" style="width:100%"></div><span class="db-val">400 MB</span></div>
-  <div class="db-label">Status</div>
-  <div style="color:var(--ds-success);font-weight:700">✓ manageable</div>
-  <div style="color:var(--ds-warn);font-weight:700">⚠ fragile</div>
-  <div style="color:var(--ds-danger);font-weight:700">✗ untouchable</div>
-</div>
-
-The pattern is always the same: manual resource management works at small scale and fails at compound scale. Not because engineers are sloppy. Because *no human tracks 25 lifetimes and 47 transitions in their head every sprint*. You need a system that sees the whole frame at once.
-
----
+The pattern is always the same: manual resource management works at small scale and fails at compound scale. Not because engineers are sloppy. Because *no human tracks 25 lifetimes and 47 transitions in their head at once*. You need a system that sees the whole frame at once.
 
 ## 💡 The Core Idea
 
@@ -282,7 +251,7 @@ Virtual resources fall into two categories:
       <strong>Lifetime:</strong> single frame, created and destroyed within the graph<br>
       <strong>Declared as:</strong> descriptor (size, format, usage flags)<br>
       <strong>GPU memory:</strong> allocated at compile, freed at frame end<br>
-      <strong>Aliasable:</strong> <span style="color:var(--ds-success);font-weight:700;">Yes</span>. Non-overlapping lifetimes share physical memory.<br>
+      <strong>Aliasable:</strong> <span style="color:color-mix(in srgb, var(--ds-success) 60%, currentColor);font-weight:700;">Yes</span>. Non-overlapping lifetimes share physical memory.<br>
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
   </div>
@@ -292,7 +261,7 @@ Virtual resources fall into two categories:
       <strong>Lifetime:</strong> spans multiple frames, owned by an external system<br>
       <strong>Declared as:</strong> existing GPU handle registered into the graph<br>
       <strong>GPU memory:</strong> already allocated. The graph only tracks state.<br>
-      <strong>Aliasable:</strong> <span style="color:var(--ds-danger);font-weight:700;">No</span>. Lifetime extends beyond the frame.<br>
+      <strong>Aliasable:</strong> <span style="color:color-mix(in srgb, var(--ds-danger) 60%, currentColor);font-weight:700;">No</span>. Lifetime extends beyond the frame.<br>
       <strong>Examples:</strong> backbuffer, TAA history, shadow atlas, blue noise LUT
     </div>
   </div>

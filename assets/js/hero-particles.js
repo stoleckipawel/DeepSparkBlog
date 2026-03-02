@@ -13,9 +13,9 @@
   var sceneW, sceneH, offX, offY;
 
   /* -- Tunables ------------------------------------------------- */
-  var RAY_COUNT      = 22;
+  var RAY_COUNT      = 28;
   var RAY_LIFETIME   = 16000;
-  var SPAWN_STAGGER  = 600;
+  var SPAWN_STAGGER  = 480;
   var MAX_BOUNCES    = 8;
   var FOCAL_DEPTH    = 0.35;
   var DOF_STRENGTH   = 16;
@@ -339,27 +339,34 @@
     var r = Math.random();
 
     /* Spawn from random positions throughout the entire scene */
-    if (r < 0.30) {
+    if (r < 0.25) {
+      /* CENTER BURST — spawn near center, shoot outward to sides */
+      ox = rand(0.44, 0.56);
+      oy = rand(0.40, 0.60);
+      /* Bias angle toward left or right (horizontal spread) */
+      var side = Math.random() < 0.5 ? 1 : -1;
+      angle = side * rand(0.15, 1.2) + rand(-0.35, 0.35);
+    } else if (r < 0.47) {
       /* Random position in the corridor floor area */
       ox = rand(0.28, 0.72);
       oy = rand(0.55, 0.90);
       angle = rand(0, 360) * Math.PI / 180;
-    } else if (r < 0.50) {
+    } else if (r < 0.60) {
       /* Random position in the open-air gap (sunlight entry) */
       ox = rand(0.30, 0.70);
       oy = rand(0.02, 0.30);
       angle = rand(0, 360) * Math.PI / 180;
-    } else if (r < 0.65) {
+    } else if (r < 0.72) {
       /* Near left columns */
       ox = rand(0.15, 0.30);
       oy = rand(0.20, 0.80);
       angle = rand(0, 360) * Math.PI / 180;
-    } else if (r < 0.80) {
+    } else if (r < 0.84) {
       /* Near right columns */
       ox = rand(0.70, 0.85);
       oy = rand(0.20, 0.80);
       angle = rand(0, 360) * Math.PI / 180;
-    } else if (r < 0.90) {
+    } else if (r < 0.92) {
       /* Gallery / balustrade level */
       ox = rand(0.20, 0.80);
       oy = rand(0.30, 0.45);
