@@ -37,10 +37,10 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
       </div>
       <div class="ds-mvp-card__desc">Pass declaration, virtual resources, linear execution.</div>
       <div class="ds-mvp-card__tags">
-        <span class="ds-badge ds-badge--info">🔓 AddPass</span>
-        <span class="ds-badge ds-badge--info">🔓 CreateResource</span>
-        <span class="ds-badge ds-badge--info">🔓 ImportResource</span>
-        <span class="ds-badge ds-badge--info">🔓 Execute()</span>
+        <span class="ds-badge ds-badge--info">AddPass</span>
+        <span class="ds-badge ds-badge--info">CreateResource</span>
+        <span class="ds-badge ds-badge--info">ImportResource</span>
+        <span class="ds-badge ds-badge--info">Execute()</span>
       </div>
       <div class="ds-power-bar"><div class="ds-power-bar__fill ds-power-bar__fill--info"></div></div>
       <div class="ds-power-bar__labels"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
@@ -57,10 +57,10 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
       </div>
       <div class="ds-mvp-card__desc">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion.</div>
       <div class="ds-mvp-card__tags">
-        <span class="ds-badge ds-badge--code">🔓 read / write</span>
-        <span class="ds-badge ds-badge--code">🔓 topo-sort</span>
-        <span class="ds-badge ds-badge--code">🔓 pass culling</span>
-        <span class="ds-badge ds-badge--code">🔓 auto barriers</span>
+        <span class="ds-badge ds-badge--code">read / write</span>
+        <span class="ds-badge ds-badge--code">topo-sort</span>
+        <span class="ds-badge ds-badge--code">pass culling</span>
+        <span class="ds-badge ds-badge--code">auto barriers</span>
       </div>
       <div class="ds-power-bar"><div class="ds-power-bar__fill ds-power-bar__fill--v2"></div></div>
       <div class="ds-power-bar__labels"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
@@ -76,11 +76,11 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
         <span class="ds-badge ds-badge--success ds-badge--loc">~500 LOC</span>
         <span class="ds-badge ds-badge--solid-success" style="font-size:.62em;font-weight:800;">★ FULL MVP</span>
       </div>
-      <div class="ds-mvp-card__desc">Compile precomputes everything (sort, cull, lifetimes, aliasing, barriers) into a <code>CompiledPlan</code>.</div>
+      <div class="ds-mvp-card__desc">Compile precomputes everything (sort, cull, lifetimes, aliasing, barriers) into a compiled plan.</div>
       <div class="ds-mvp-card__tags">
-        <span class="ds-badge ds-badge--success">🔓 lifetime scan</span>
-        <span class="ds-badge ds-badge--success">🔓 memory aliasing</span>
-        <span class="ds-badge ds-badge--success">⚡ VRAM aliasing</span>
+        <span class="ds-badge ds-badge--success">lifetime scan</span>
+        <span class="ds-badge ds-badge--success">memory aliasing</span>
+        <span class="ds-badge ds-badge--success">VRAM aliasing</span>
       </div>
       <div class="ds-power-bar"><div class="ds-power-bar__fill ds-power-bar__fill--full"></div></div>
       <div class="ds-power-bar__labels"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
@@ -298,7 +298,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces eight API dec
 
 ### 🚀 The Target API
 
-With those choices made, here's where we're headed: the final API in under 30 lines:
+With those choices made, here's where we're headed — the complete API:
 
 {{< include-code file="api_demo.cpp" lang="cpp" open="true" >}}
 
@@ -680,6 +680,8 @@ With the adjacency list built, `TopoSort()` implements Kahn's zero-in-degree que
 ### ✂ Pass culling
 
 A sorted graph still runs passes nobody reads from. Culling is dead-code elimination for GPU work ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)), using a single backward walk that marks the final pass alive, then propagates through `dependsOn` edges:
+
+<div class="ext-ref"><a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/render-dependency-graph-in-unreal-engine">UE5 Render Dependency Graph</a> — automatically culls passes with zero consumers using the same reference-counting approach</div>
 
 {{< code-diff title="v2, Pass culling" collapsible="true" >}}
 @@ frame_graph_v2.h, RenderPass gets alive flag @@

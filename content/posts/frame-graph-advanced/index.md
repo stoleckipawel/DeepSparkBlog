@@ -31,6 +31,8 @@ Barriers optimize work on a single GPU queue. But modern GPUs expose at least tw
 
 The compiler needs to answer one question for every pair of passes: **can these run at the same time?** Two passes can overlap only if neither depends on the other, directly or indirectly. A pass that writes the GBuffer can't overlap with lighting (which reads it), but it *can* overlap with SSAO if they share no resources.
 
+<div class="ext-ref"><a href="https://advances.realtimerendering.com/s2016/Wihlidal_LogisticalNightmares.pptx">id Software — Doom (2016), SIGGRAPH 2016</a> — async compute on AMD GCN showed 5–8% GPU-time savings by overlapping shadow map compute with geometry rasterization</div>
+
 The algorithm is called **reachability analysis**: for each pass, the compiler figures out every other pass it can eventually reach by following edges forward through the DAG. If pass A can reach pass B (or B can reach A), they're dependent. If neither can reach the other, they're **independent** and safe to run on separate queues.
 
 ### 🔗 Minimizing fences
@@ -111,6 +113,8 @@ Solving fences is the easy part. The compiler handles that. The harder question 
 </div>
 <div style="font-size:.82em;opacity:.6;margin-top:-.2em;text-align:center;">Good candidates: SSAO alongside ROP-bound geometry, volumetrics during shadow rasterization, particle sim during UI.</div>
 
+<div class="ext-ref"><a href="https://www.activision.com/cdn/research/2020-02_GPUDrivenRendering.pdf">Call of Duty: Modern Warfare (2019) — GDC 2020</a> — IW engine overlaps SSAO + shadow compute with geometry passes on the async queue, reporting ~15% frame-time improvement</div>
+
 Try it yourself: move compute-eligible passes between queues and see how fence count and frame time change:
 
 {{< interactive-async >}}
@@ -170,6 +174,8 @@ A **split barrier** breaks the transition into two halves and spreads them apart
 </div>
 
 The passes between begin and end are the **overlap gap**, executing while the cache flush happens in the background. The compiler places these automatically: begin immediately after the source pass, end immediately before the destination.
+
+<div class="ext-ref"><a href="https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/MiniEngine">D3D12 MiniEngine — Microsoft DirectX Samples</a> — demonstrates split barrier patterns with <code>D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY</code> / <code>END_ONLY</code></div>
 
 ### 📏 How much gap is enough?
 

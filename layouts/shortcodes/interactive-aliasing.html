@@ -1,7 +1,7 @@
 {{/* Interactive Lifetime & Aliasing Visualizer — see resources overlap + memory savings */}}
 <div class="interactive-widget" id="alias-widget">
   <div class="widget-body">
-    <canvas id="alias-canvas" width="720" height="310"></canvas>
+    <canvas id="alias-canvas" width="720" height="360"></canvas>
     <div class="widget-toolbar">
       <div class="widget-toolbar-left">
         <button class="widget-pill alias-ex-btn alias-ex-active" data-ex="0" onclick="aliasSetExample(0)">Deferred (7 res)</button>
@@ -38,6 +38,14 @@
 :is(.dark,.scheme-congo) #alias-canvas{border-color:var(--color-neutral-700)}
 .alias-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
 :is(.dark,.scheme-congo) .alias-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
+
+/* Aliasing toggle responsive */
+@media (max-width: 500px) {
+  .alias-toggle-slider{width:44px;height:24px;border-radius:12px}
+  .alias-toggle-slider::after{width:20px;height:20px}
+  .alias-toggle input:checked+.alias-toggle-slider::after{transform:translateX(20px)}
+  .alias-vram{font-size:.72em}
+}
 </style>
 
 <script>
@@ -141,7 +149,7 @@ function isDark(){
 }
 
 function draw(){
-  const W=canvas.width,H=canvas.height;
+  const W=_logW,H=_logH;
   const bg=isDark()?"#1a1a2e":"#ffffff";
   const textC=isDark()?"#e5e5e5":"#1e1e1e";
   const gridC=isDark()?"#333":"#e5e5e5";
@@ -149,11 +157,12 @@ function draw(){
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
 
-  const left=90,top=40,right=W-30,bottom=H-40;
+  const left=Math.min(90,W*0.14),top=40,right=W-Math.min(30,W*0.04),bottom=H-40;
   const colW=(right-left)/passes.length;
+  const baseFontSize=Math.max(8,Math.min(11,W*0.016));
 
   // Grid + pass labels
-  ctx.textAlign="center";ctx.font="bold 11px ui-monospace,monospace";
+  ctx.textAlign="center";ctx.font="bold "+baseFontSize+"px ui-monospace,monospace";
   passes.forEach((p,i)=>{
     const x=left+i*colW+colW/2;
     ctx.fillStyle=mutedC;ctx.fillText(p,x,top-12);
@@ -174,7 +183,9 @@ function draw(){
   const gap=4;
 
   // Draw resource bars
-  ctx.textAlign="right";ctx.font="11px ui-monospace,monospace";
+  const labelFont=baseFontSize+"px ui-monospace,monospace";
+  const barFont="bold "+Math.max(8,baseFontSize-1)+"px ui-monospace,monospace";
+  ctx.textAlign="right";ctx.font=labelFont;
 
   if(aliasOn){
     // Draw by block
@@ -183,7 +194,7 @@ function draw(){
       const blockSize=block.reduce((m,j)=>Math.max(m,resources[j].sizeMB),0);
       // Block label
       ctx.fillStyle=mutedC;
-      ctx.textAlign="right";
+      ctx.textAlign="right";ctx.font=labelFont;
       ctx.fillText("block"+b+" ("+blockSize+"MB)",left-6,y+rowH/2+4);
       // Draw each resource in this block
       block.forEach(ri=>{
@@ -195,7 +206,7 @@ function draw(){
         roundRect(ctx,x1,y,x2-x1,rowH,4);ctx.fill();
         ctx.globalAlpha=1;
         // Label
-        ctx.fillStyle="#fff";ctx.font="bold 10px ui-monospace,monospace";
+        ctx.fillStyle="#fff";ctx.font=barFont;
         ctx.textAlign="center";
         ctx.fillText(r.name+" ("+r.sizeMB+"MB)",(x1+x2)/2,y+rowH/2+4);
       });
@@ -203,14 +214,14 @@ function draw(){
   }else{
     resources.forEach((r,i)=>{
       const y=top+8+i*(rowH+gap);
-      ctx.fillStyle=mutedC;ctx.textAlign="right";ctx.font="11px ui-monospace,monospace";
+      ctx.fillStyle=mutedC;ctx.textAlign="right";ctx.font=labelFont;
       ctx.fillText(r.name+" ("+r.sizeMB+"MB)",left-6,y+rowH/2+4);
       const x1=left+r.first*colW+3;
       const x2=left+(r.last+1)*colW-3;
       ctx.globalAlpha=0.85;ctx.fillStyle=r.color;
       roundRect(ctx,x1,y,x2-x1,rowH,4);ctx.fill();
       ctx.globalAlpha=1;
-      ctx.fillStyle="#fff";ctx.font="bold 10px ui-monospace,monospace";
+      ctx.fillStyle="#fff";ctx.font=barFont;
       ctx.textAlign="center";
       ctx.fillText(r.name,(x1+x2)/2,y+rowH/2+4);
     });
@@ -246,14 +257,26 @@ window.aliasToggle=function(on){aliasOn=on;draw();};
 window.aliasReset=function(){loadExample(curExIdx)};
 window.aliasSetExample=loadExample;
 
+// Compute canvas height based on current resource count
+function canvasHeight(){
+  var rows=resources?resources.length:7;
+  var rowH=28,gap=4,padTop=44,padBot=44;
+  return padTop+rows*(rowH+gap)+padBot;
+}
+
+// Logical dimensions (CSS pixels), updated by resizeCanvas
+var _logW=720,_logH=360;
+
 // Handle DPI scaling
 function resizeCanvas(){
-  const rect=canvas.getBoundingClientRect();
-  const dpr=window.devicePixelRatio||1;
-  canvas.width=rect.width*dpr;
-  canvas.height=310*dpr;
+  _logH=canvasHeight();
+  var rect=canvas.getBoundingClientRect();
+  _logW=rect.width;
+  var dpr=window.devicePixelRatio||1;
+  canvas.width=_logW*dpr;
+  canvas.height=_logH*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  canvas.style.height="310px";
+  canvas.style.height=_logH+"px";
   draw();
 }
 

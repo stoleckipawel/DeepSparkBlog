@@ -391,17 +391,21 @@ The sorted order tells the compiler exactly when each resource is first written 
 
 Without aliasing, every transient texture gets its own allocation for the entire frame, even if it's only alive for 2–3 passes. With aliasing, a GBuffer that's done by pass 3 and a bloom buffer that starts at pass 4 can sit in the same memory. Real-world deferred pipelines commonly see **40–50% transient VRAM reduction** once aliasing is enabled.
 
+<div class="ext-ref"><a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in">Frostbite / Battlefield 1 — GDC 2017</a> — reported exactly this savings from graph-driven transient aliasing in production</div>
+
 The allocator works in two passes: first, walk the sorted pass list and record each transient resource's first write and last read. Then scan resources in order of first-use. For each one, check if an existing heap block is free (its previous occupant has finished). If so, reuse it. If not, allocate a new block.
 
 **Correctness constraints.** Aliasing introduces four hard requirements. Violating any of them causes GPU corruption or driver-level undefined behaviour:
 
-1. **First access must initialise the resource.** The physical block still holds the previous occupant's texels. For resources with render-target or depth-stencil flags, D3D12 requires one of three operations before any other access: a Clear, a `DiscardResource`, or a full-subresource Copy. Vulkan equivalently requires load-op `CLEAR` or `DONT_CARE` (which acts as a discard). Without this the GPU reads undefined contents from the evicted resource. ([D3D12 `CreatePlacedResource` docs](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource), [Vulkan memory aliasing spec](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#resources-memory-aliasing))
+1. **First access must initialise the resource.** The physical block still holds the previous occupant's texels. For resources with render-target or depth-stencil flags, D3D12 requires one of three operations before any other access: a Clear, a `DiscardResource`, or a full-subresource Copy. Vulkan equivalently requires load-op `CLEAR` or `DONT_CARE` (which acts as a discard). Without this the GPU reads undefined contents from the evicted resource.
 
-2. **Only transient (single-frame) resources qualify.** Imported resources that persist across frames (swapchain images, temporal history buffers) must keep their data intact, so they can't share a heap slot. Our code enforces this: `ScanLifetimes` sets `isTransient = false` for any entry with `imported == true`, and the allocator skips them.
+<p class="ext-ref">D3D12 — <a href="https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource">CreatePlacedResource docs</a> · Vulkan — <a href="https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#resources-memory-aliasing">memory aliasing spec</a></p>
 
-3. **Placed-resource alignment is non-negotiable.** D3D12 requires 64 KB (`D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT`) for most textures, or 4 MB for MSAA. Vulkan surfaces the requirement via `VkMemoryRequirements::alignment`. Our `AllocSize()` rounds up to 64 KB, matching the common-case constraint. ([D3D12 heap alignment](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_desc), [Vulkan `VkMemoryRequirements`](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VkMemoryRequirements))
+2. **Only transient (single-frame) resources qualify.** Imported resources that persist across frames (swapchain images, temporal history buffers) must keep their data intact, so they can't share a heap slot. The allocator enforces this by checking whether a resource is imported and, if so, skipping it during aliasing.
 
-4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Vulkan handles this via a `VkImageMemoryBarrier` transitioning the incoming resource from `VK_IMAGE_LAYOUT_UNDEFINED`, which implicitly invalidates caches and metadata for the shared memory region. Omitting this barrier causes timing-dependent corruption. AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's `ComputeBarriers` Phase 1 emits these automatically whenever `blockOwner` changes.
+3. **Placed-resource alignment is non-negotiable.** D3D12 requires 64 KB (`D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT`) for most textures, or 4 MB for MSAA. Vulkan surfaces the requirement via `VkMemoryRequirements::alignment`. Any allocator must round up to at least 64 KB to satisfy the common-case constraint.
+
+4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Vulkan handles this via a `VkImageMemoryBarrier` transitioning the incoming resource from `VK_IMAGE_LAYOUT_UNDEFINED`, which implicitly invalidates caches and metadata for the shared memory region. Omitting this barrier causes timing-dependent corruption. AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's barrier compiler emits these automatically whenever a heap block changes owner between passes.
 
 {{< interactive-aliasing >}}
 
@@ -411,11 +415,11 @@ A GPU resource can't be a render target and a shader input at the same time. The
 
 Barriers follow the same rule as everything else in a frame graph: **compile analyzes and decides, execute submits and runs.** The compile stage is static analysis, the execute stage is command playback.
 
-During compile, the compiler walks every pass in topological order and builds a per-resource usage timeline: which passes touch which resource, and in what state (color attachment, shader read, transfer destination, etc.). For each resource it tracks a `currentState`, starting at `Undefined`. Whenever a pass needs the resource in a different state, the compiler records a transition (say, `ColorAttachment → ShaderRead` when GBuffer's output becomes Lighting's input) and updates the current state. No GPU work happens. This is purely analysis over the declared reads and writes.
+During compile, the compiler walks every pass in topological order and builds a per-resource usage timeline: which passes touch which resource, and in what state (color attachment, shader read, transfer destination, etc.). For each resource it tracks the current state, starting at *Undefined*. Whenever a pass needs the resource in a different state, the compiler records a transition (say, *ColorAttachment → ShaderRead* when GBuffer's output becomes Lighting's input) and updates the tracked state. No GPU work happens. This is purely analysis over the declared reads and writes.
 
 A concrete example: suppose GBuffer writes Albedo as a color attachment, then Lighting and PostProcess both read it as a shader resource. The compiler emits one barrier after GBuffer (`ColorAttachment → ShaderRead`) and nothing between Lighting and PostProcess, since consecutive reads in the same state don't need a transition. A production compiler goes further: it merges multiple transitions into a single barrier call per pass, removes redundant transitions, and eliminates barriers for resources that are about to be aliased anyway.
 
-The result is a `CompiledPlan` where each pass carries a list of pre-barriers alongside its execute callback. At execution time the loop is trivial: for each pass, submit its precomputed barriers (`vkCmdPipelineBarrier` / `ResourceBarrier`), begin the render pass, call the execute lambda, end the render pass. No graph walking, no state comparison, no decisions. The GPU receives exactly what was precomputed.
+The result is a compiled plan where each pass carries a list of pre-barriers alongside its execute callback. At execution time the loop is trivial: for each pass, submit its precomputed barriers (`vkCmdPipelineBarrier` / `ResourceBarrier`), begin the render pass, call the execute callback, end the render pass. No graph walking, no state comparison, no decisions. The GPU receives exactly what was precomputed.
 
 {{< interactive-barriers >}}
 
@@ -507,7 +511,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 **Hybrid** exists precisely because of that cost. When the graph topology is mostly stable frame-to-frame (same passes, same connections), there's no reason to recompute the same plan 60 times per second. A hybrid approach caches the compiled result and only invalidates when the declared graph actually changes (typically detected by hashing the pass + resource set). The tradeoff is complexity: you need reliable dirty-tracking and must guarantee a stale plan is never replayed against a changed graph.
 
-**Static** compiles once at init and replays the same plan forever. It's rarely useful because the whole point of a frame graph is flexibility: feature toggles, dynamic quality scaling, debug overlays. A locked pipeline can't adapt. It appears occasionally in fixed-function scenarios like a VR compositor that always runs the same few passes.
+**Static** compiles once at init and replays the same plan forever. It's rarely useful because the whole point of a frame graph is flexibility: feature toggles, dynamic quality scaling, debug overlays. A locked pipeline can't adapt.
 
 ---
 
@@ -521,7 +525,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <strong>Memory aliasing</strong><br><span style="opacity:.65">Opt-in, fragile, rarely done</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Memory aliasing</strong><br>Automatic: compiler sees all lifetimes. <strong style="color:var(--ds-success);">~50% transient VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(Frostbite reported this on BF1's deferred pipeline, see <a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in" style="opacity:.7;">GDC 2017</a>)</span>
+    <strong>Memory aliasing</strong><br>Automatic: compiler sees all lifetimes. <strong style="color:var(--ds-success);">~50% transient VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(Frostbite, BF1 — <a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in">GDC 2017</a>)</span>
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">

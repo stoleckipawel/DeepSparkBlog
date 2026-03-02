@@ -10,7 +10,9 @@
     <button class="widget-btn async-ex-btn" onclick="asyncSetExample(2)">Hybrid Ray-Trace</button>
   </div>
   <div class="widget-body">
-    <svg id="async-svg" viewBox="0 0 700 290" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
+    <div class="async-svg-wrap">
+      <svg id="async-svg" viewBox="0 0 700 290" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
+    </div>
     <div class="async-legend" id="async-legend"></div>
     <div class="async-stats" id="async-stats"></div>
     <div class="async-explain" id="async-explain"></div>
@@ -36,6 +38,15 @@
 .async-ex-btn:hover{border-color:var(--ds-info);color:var(--ds-info-light)}
 .async-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
 :is(.dark,.scheme-congo) .async-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
+
+/* Async widget responsive: mobile scroll wrapper */
+.async-svg-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width: 600px) {
+  #async-svg{min-width:580px}
+  .async-explain{font-size:.76em}
+  .async-stats{font-size:.75em;gap:.5em}
+  .async-legend{font-size:.68em;gap:.5em}
+}
 </style>
 
 <script>

@@ -470,6 +470,68 @@ html {
 /* ── Muted utility ───────────────────────────────────────────── */
 .ds-muted { opacity: .5; }
 
+/* ── External source / citation block ────────────────────────── */
+.ext-ref {
+  display: block;
+  font-size: .82em;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, .55);
+  border-left: 2px solid rgba(var(--ds-gold-rgb, 255,209,102), .30);
+  padding: .35em 0 .35em .75em;
+  margin: .7em 0 .9em 0;
+}
+.ext-ref::before {
+  content: '📎 ';
+  font-size: .9em;
+  margin-right: .15em;
+}
+.ext-ref a {
+  color: rgba(var(--ds-gold-rgb, 255,209,102), .60);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(var(--ds-gold-rgb, 255,209,102), .25);
+  text-underline-offset: 2px;
+  transition: color .15s ease, text-decoration-color .15s ease;
+}
+.ext-ref a:hover {
+  color: var(--ds-gold, #FFD166);
+  text-decoration-style: solid;
+  text-decoration-color: var(--ds-gold, #FFD166);
+}
+/* Stacked sources */
+.ext-ref + .ext-ref { margin-top: -.4em; }
+
+/* ── External doc links inside article body (auto-detected) ─── */
+.article-content a[href*="microsoft.com"],
+.article-content a[href*="khronos.org"],
+.article-content a[href*="github.com"],
+.article-content a[href*="epicgames.com"],
+.article-content a[href*="gpuopen.com"],
+.article-content a[href*="gdcvault.com"],
+.article-content a[href*="nvidia.com"],
+.article-content a[href*="activision.com"],
+.article-content a[href*="realtimerendering.com"] {
+  color: rgba(var(--ds-gold-rgb, 255,209,102), .55);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(var(--ds-gold-rgb, 255,209,102), .22);
+  text-underline-offset: 2px;
+  transition: color .15s ease, text-decoration-color .15s ease;
+}
+.article-content a[href*="microsoft.com"]:hover,
+.article-content a[href*="khronos.org"]:hover,
+.article-content a[href*="github.com"]:hover,
+.article-content a[href*="epicgames.com"]:hover,
+.article-content a[href*="gpuopen.com"]:hover,
+.article-content a[href*="gdcvault.com"]:hover,
+.article-content a[href*="nvidia.com"]:hover,
+.article-content a[href*="activision.com"]:hover,
+.article-content a[href*="realtimerendering.com"]:hover {
+  color: var(--ds-gold, #FFD166);
+  text-decoration-style: solid;
+  text-decoration-color: var(--ds-gold, #FFD166);
+}
+
 /* ── MVP timeline progress bar ───────────────────────────────── */
 .ds-power-bar {
   height: 8px;
@@ -680,6 +742,9 @@ main > section {
   --ds-indigo-light:  color-mix(in srgb, #818cf8 65%, #999);
   --ds-pink:          color-mix(in srgb, #ec4899 65%, #888);
   --ds-teal:          color-mix(in srgb, #14b8a6 65%, #888);
+
+  /* Mute the bright gold inline-code colour (secondary-400) */
+  --tw-prose-code: color-mix(in srgb, rgba(255,215,120,1) 55%, #999);
 }
 
 /* ── Heading hierarchy (UE-docs inspired: clean, generous) ── */
@@ -791,6 +856,7 @@ main > section {
   background: rgba(255, 255, 255, .015) !important;
   border-right: 1px solid rgba(255, 255, 255, .06);
   margin: 0;
+  font-size: .85em;
 }
 /* Line number spans — right-aligned like UE docs */
 .highlight .lnt,
@@ -803,10 +869,12 @@ main > section {
   display: block;
   text-align: right;
 }
-/* Code column */
+/* Code column — match line-number line-height to prevent drift */
 .highlight .lntd:last-child pre {
   padding: 1em 1.2em !important;
   margin: 0;
+  line-height: 1.65;
+  font-size: .85em;
 }
 /* Keep .highlight tables from getting prose styles */
 .prose .lntable,
@@ -910,48 +978,7 @@ main > section {
   pointer-events: none;
 }
 
-/* ── Back-to-top button ──────────────────────────────────────── */
-.ds-back-to-top {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, .1);
-  background: rgba(11, 11, 14, .85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: rgba(255, 255, 255, .6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity .25s ease, transform .25s ease, background .15s ease, border-color .15s ease;
-  z-index: 900;
-  pointer-events: none;
-}
-.ds-back-to-top.ds-visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-.ds-back-to-top:hover {
-  background: rgba(var(--ds-accent-rgb), .12);
-  border-color: rgba(var(--ds-accent-rgb), .3);
-  color: var(--ds-accent);
-}
-.ds-back-to-top svg {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
+
 
 /* ── Posts page hero section ─────────────────────────────────── */
 .ds-posts-hero {
@@ -1315,10 +1342,7 @@ footer.pt-8 {
   #single_header h1 {
     font-size: 1.6rem;
   }
-  .ds-back-to-top {
-    bottom: 1rem;
-    right: 1rem;
-  }
+
 }
 
 /* ── Collapsible code blocks (include-code shortcode) ────────── */
@@ -2151,6 +2175,65 @@ footer.pt-8 {
 .widget-btn-primary:hover{filter:brightness(1.15);animation:none}
 .widget-btn-primary:disabled{opacity:.4;cursor:default;filter:none;animation:none}
 .widget-btn-row{display:flex;gap:.5em;align-items:center}
+
+/* ── Widget ultrawide guard ──────────────────────────────────── */
+.interactive-widget svg,
+.interactive-widget canvas {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* ── Widget responsive: tablet ───────────────────────────────── */
+@media (max-width: 768px) {
+  .widget-pill,
+  .widget-btn {
+    font-size: .78em;
+    padding: .4em .85em;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .widget-body { padding: .6em .6em .5em; }
+  .widget-toolbar { gap: .4em; }
+  .barrier-table { font-size: .72em; }
+  .barrier-log { font-size: .72em; overflow-x: auto; }
+}
+
+/* ── Widget responsive: phone ────────────────────────────────── */
+@media (max-width: 500px) {
+  .widget-pill,
+  .widget-btn {
+    font-size: .82em;
+    padding: .5em 1em;
+    min-height: 44px;
+  }
+  .widget-body { padding: .5em .45em .4em; }
+  .widget-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .5em;
+  }
+  .widget-toolbar-left,
+  .widget-toolbar-right {
+    justify-content: center;
+  }
+  .interactive-widget::after {
+    font-size: .48em;
+    top: .35em;
+    right: .4em;
+  }
+  /* Barrier table: horizontal scroll wrapper */
+  .barrier-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: .68em;
+  }
+  .barrier-log { font-size: .68em; overflow-x: auto; }
+  .barrier-pass-pill { font-size: .72em; padding: .35em .6em; min-height: 36px; display: inline-flex; align-items: center; }
+}
 
 
 /* ── Card hover lift effect ── */

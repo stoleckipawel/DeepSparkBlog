@@ -52,35 +52,6 @@
 })();
 </script>
 
-<!-- ═══ Back-to-top button ═══ -->
-<script>
-(function(){
-  var btn = document.createElement('button');
-  btn.className = 'ds-back-to-top';
-  btn.setAttribute('aria-label', 'Back to top');
-  btn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"></polyline></svg>';
-  document.body.appendChild(btn);
-
-  btn.addEventListener('click', function() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-
-  var ticking = false;
-  function check() {
-    ticking = false;
-    if (window.scrollY > 400) {
-      btn.classList.add('ds-visible');
-    } else {
-      btn.classList.remove('ds-visible');
-    }
-  }
-
-  window.addEventListener('scroll', function() {
-    if (!ticking) { ticking = true; requestAnimationFrame(check); }
-  }, { passive: true });
-  check();
-})();
-</script>
 
 <!-- ═══ Breadcrumb trail (UE-docs inspired) ═══ -->
 <script>

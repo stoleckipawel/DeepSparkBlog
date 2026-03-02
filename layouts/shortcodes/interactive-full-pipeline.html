@@ -67,6 +67,16 @@
 .pipe-toggle-label{font-weight:600;color:var(--color-neutral-700,#374151)}
 :is(.dark,.scheme-congo) .pipe-toggle-label{color:var(--color-neutral-300)}
 
+/* Pipeline toggle responsive */
+@media (max-width: 500px) {
+  .pipe-toggle-slider{width:44px;height:24px}
+  .pipe-toggle-slider::after{width:20px;height:20px}
+  .pipe-toggle input:checked+.pipe-toggle-slider::after{transform:translateX(20px)}
+  .pipe-toggle{gap:.35em}
+  .pipe-toggle-label{font-size:.78em}
+  .pipe-controls{padding:.5em .6em}
+}
+
 /* Minimap */
 .pipe-minimap-wrap{margin:.5em 0;border:1px solid var(--color-neutral-200,#e5e5e5);border-radius:10px;overflow:hidden}
 :is(.dark,.scheme-congo) .pipe-minimap-wrap{border-color:var(--color-neutral-700)}
@@ -533,7 +543,7 @@ function renderFocus(opts){
   var contentH=Math.max((maxNeighborRows-1)*F_RG+F_NH,F_NH+20);
   var H=F_PAD*2+contentH+16;
   svg.setAttribute("viewBox","0 0 "+W+" "+H);
-  svg.style.minHeight=Math.min(H,340)+"px";
+  svg.style.minHeight=H+"px";
   svg.innerHTML="";
 
   svg.append(el("rect",{x:0,y:0,width:W,height:H,fill:C.focusBg(),rx:8}));
