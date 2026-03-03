@@ -12,6 +12,12 @@
 }}
 
 <div class="ds-posts-series" data-keep-emoji="true">
+  <div class="ds-posts-hero ds-reveal">
+    <p class="ds-posts-hero-label">Frame Graph Series</p>
+    <h2 class="ds-posts-hero-title">Frame Graph: Theory → Build → Scale</h2>
+    <p class="ds-posts-hero-desc">Four connected deep dives that take you from the core DAG model to production-ready rendering architecture, with practical C++ implementation in between.</p>
+  </div>
+
   <div class="ds-posts-series-grid">
     {{ range $posts }}
       {{ $page := site.GetPage (printf "/posts/%s" .slug) }}
@@ -25,12 +31,15 @@
             "ariaLabel"     (printf "%s thumbnail" $page.Title)
           ) }}
           <div class="ds-posts-card-info">
+            <span class="ds-posts-card-part" style="color: {{ .subtitleColor }};">{{ .subtitle }}</span>
             <h3 class="ds-posts-card-title">{{ $page.Title }}</h3>
             <p class="ds-posts-card-summary">{{ $page.Description | truncate 120 }}</p>
             <div class="ds-posts-card-meta">
               <span>{{ $page.ReadingTime }} min read</span>
               <span class="ds-posts-card-dot">&middot;</span>
               <span>{{ $page.Date.Format "Jan 2006" }}</span>
+              <span class="ds-posts-card-dot">&middot;</span>
+              <span>Frame Graph</span>
             </div>
           </div>
         </a>

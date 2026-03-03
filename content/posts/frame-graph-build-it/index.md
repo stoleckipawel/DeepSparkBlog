@@ -28,7 +28,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
   <div style="position:absolute;left:1.15em;top:3.2em;bottom:.8em;width:3px;background:linear-gradient(to bottom, var(--ds-info), var(--ds-code), var(--ds-success));border-radius:2px;opacity:.45;"></div>
 
   <!-- ── v1 ── -->
-  <a class="ds-mvp-link" href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
+  <a class="ds-mvp-link" href="#v1-the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
     <div class="ds-dot ds-dot--info" style="left:-3em;top:.3em;">v1</div>
     <div class="mvp-card ds-mvp-card ds-mvp-card--info">
       <div class="ds-mvp-card__title ds-mvp-card__title--info">
@@ -48,7 +48,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
   </a>
 
   <!-- ── v2 ── -->
-  <a class="ds-mvp-link" href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
+  <a class="ds-mvp-link" href="#mvp-v2-dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
     <div class="ds-dot ds-dot--code" style="left:-3em;top:.3em;">v2</div>
     <div class="mvp-card ds-mvp-card ds-mvp-card--code">
       <div class="ds-mvp-card__title ds-mvp-card__title--code">
@@ -68,7 +68,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
   </a>
 
   <!-- ── v3 ── -->
-  <a class="ds-mvp-link" href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
+  <a class="ds-mvp-link" href="#mvp-v3-lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
     <div class="ds-dot ds-dot--success" style="left:-3em;top:.3em;">v3</div>
     <div class="mvp-card ds-mvp-card ds-mvp-card--success">
       <div class="ds-mvp-card__title ds-mvp-card__title--success">
@@ -90,7 +90,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
 
 ---
 
-## 🏗 Architecture & API Decisions
+## Architecture & API Decisions
 
 We start from the API you *want* to write, then build toward it, starting with bare scaffolding and ending with automatic barriers and memory aliasing.
 
@@ -215,7 +215,7 @@ style Lifetime stroke:#16a34a,stroke-width:2.5px
 style PhysicalBlock stroke:#16a34a,stroke-width:2.5px
 {{< /mermaid >}}
 
-### 🔀 Design choices
+### Design choices
 
 The three-phase model from [Part I](../frame-graph-theory/) forces eight API decisions. Every choice is driven by the same question: *what does the graph compiler need, and what's the cheapest way to give it?*
 
@@ -296,16 +296,16 @@ The three-phase model from [Part I](../frame-graph-theory/) forces eight API dec
 
 
 
-### 🚀 The Target API
+### The Target API
 
 With those choices made, here's where we're headed — the complete API:
 
 {{< include-code file="api_demo.cpp" lang="cpp" open="true" >}}
 
-### 🧱 v1: The Scaffold
+### v1: The Scaffold
 
 <div class="ds-callout ds-callout--info">
-🎯 <strong>Goal:</strong> Declare passes and virtual resources, execute in registration order: the skeleton that v2 and v3 build on.
+<strong>Goal:</strong> Declare passes and virtual resources, execute in registration order: the skeleton that v2 and v3 build on.
 </div>
 
 Three types are all we need to start: a `ResourceDesc` (width, height, format, no GPU handle yet), a `ResourceHandle` that's just an index, and a `RenderPass` with setup + execute lambdas. The `FrameGraph` class owns arrays of both and runs passes in declaration order. No dependency tracking, no barriers. Just the foundation that v2 and v3 build on.
@@ -433,10 +433,10 @@ Compiles and runs: the execute lambdas are stubs, but the scaffolding is real. E
 
 ---
 
-## 🔗 MVP v2: Dependencies & Barriers
+## MVP v2: Dependencies & Barriers
 
 <div class="ds-callout ds-callout--info">
-🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion: the graph now drives the GPU instead of you.
+<strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion: the graph now drives the GPU instead of you.
 </div>
 
 Four steps in strict order, each one's output feeding the next:
@@ -473,7 +473,7 @@ Four steps in strict order, each one's output feeding the next:
 
 <span id="v2-versioning"></span>
 
-### 🔀 Resource versioning: the data structure
+### Resource versioning: the data structure
 
 Every write bumps a version number, and every read attaches to the current version. That’s enough to produce precise dependency edges ([theory refresher](/posts/frame-graph-theory/#how-edges-form--resource-versioning)).
 
@@ -608,7 +608,7 @@ Every `Write()` adds WAR edges from every reader of the current version (so they
 
 <span id="v2-toposort"></span>
 
-### 📊 Topological sort (Kahn's algorithm)
+### Topological sort (Kahn's algorithm)
 
 With edges in place, we need an execution order that respects every dependency. Kahn’s algorithm ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) gives us one in O(V+E). `BuildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list. `TopoSort()` does the zero-in-degree queue drain:
 
@@ -677,7 +677,7 @@ With the adjacency list built, `TopoSort()` implements Kahn's zero-in-degree que
 
 <span id="v2-culling"></span>
 
-### ✂ Pass culling
+### Pass culling
 
 A sorted graph still runs passes nobody reads from. Culling is dead-code elimination for GPU work ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)), using a single backward walk that marks the final pass alive, then propagates through `dependsOn` edges:
 
@@ -712,7 +712,7 @@ A sorted graph still runs passes nobody reads from. Culling is dead-code elimina
 
 <span id="v2-barriers"></span>
 
-### 🚧 Barrier insertion
+### Barrier insertion
 
 GPUs need explicit state transitions between resource usages: color attachment to shader read, undefined to depth, etc. The graph already knows every resource's read/write history ([theory refresher](/posts/frame-graph-theory/#barriers)), so the compiler can figure out every transition *before* execution starts.
 
@@ -892,7 +892,7 @@ All four pieces (versioning, sorting, culling, barriers) compose into `Compile()
 
 ---
 
-### 🧩 Full v2 source
+### Full v2 source
 
 <div style="margin:.6em 0;font-size:.84em;opacity:.65;line-height:1.5;">
 ℹ The full source files below include <code>printf</code> diagnostics (topo-sort order, culling results, barrier transitions) that are omitted from the diffs above to keep the focus on structure. These diagnostics are invaluable for debugging. Read through them in the source.
@@ -904,14 +904,12 @@ All four pieces (versioning, sorting, culling, barriers) compose into `Compile()
 
 That's three of the four intro promises delivered (automatic ordering, barrier insertion, and dead-pass culling), plus a clean compile/execute split that v3 will extend. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis and memory aliasing.
 
-UE5's RDG follows the same pattern. When you call `FRDGBuilder::AddPass`, RDG builds the dependency graph from your declared reads/writes, topologically sorts it, culls dead passes, computes barriers, and stores them in the compiled plan, all before recording a single GPU command.
-
 ---
 
-## 💾 MVP v3: Lifetimes & Aliasing
+## MVP v3: Lifetimes & Aliasing
 
 <div class="ds-callout ds-callout--info">
-🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory: automatic VRAM aliasing with savings that depend on pass topology and resolution (Frostbite reported ~50% on BF1's deferred pipeline).
+<strong>Goal:</strong> Non-overlapping transient resources share physical memory: automatic VRAM aliasing with savings that depend on pass topology and resolution (Frostbite reported ~50% on BF1's deferred pipeline).
 </div>
 
 V2 gives us ordering, culling, and barriers, but every transient resource still owns its own VRAM for the entire frame, even when it's only alive for two passes out of twelve. A 1080p G-Buffer alone eats ~32 MB, and the depth target another ~8 MB, and both are dead after lighting. Meanwhile the post-process chain needs similarly-sized targets that could reuse that exact same memory, because the lifetimes never overlap ([theory refresher](/posts/frame-graph-theory/#allocation-and-aliasing)). That's what v3 automates.
@@ -1260,7 +1258,7 @@ That wraps v3. Starting from v2's compile/execute split, we added lifetime analy
 
 ---
 
-### 🧩 Full v3 source
+### Full v3 source
 
 {{< include-code file="frame_graph_v3.h" lang="cpp" compact="true" >}}
 {{< include-code file="frame_graph_v3.cpp" lang="cpp" compact="true" >}}
@@ -1268,7 +1266,7 @@ That wraps v3. Starting from v2's compile/execute split, we added lifetime analy
 
 ---
 
-### ✅ What the MVP delivers
+### What the MVP delivers
 
 Here's the full per-frame lifecycle, the same three-phase architecture from [Part I](/posts/frame-graph-theory/), now backed by real code:
 
@@ -1315,7 +1313,7 @@ Here's the full per-frame lifecycle, the same three-phase architecture from [Par
 
 ~350 lines of C++17. No external dependencies, no allocator library, no render backend, just the algorithmic core that production engines build on. Every concept from [Part I](/posts/frame-graph-theory/) (virtual resources, dependency edges, topological ordering, dead-pass culling, barrier inference, lifetime analysis, and VRAM aliasing) now exists as running, compilable code.
 
-### 🔮 What's next
+### What's next
 
 The MVP runs everything on a single queue, issues barriers as immediate full-pipeline stalls, and uses the simplest possible allocation strategy. Production engines push past all three constraints:
 

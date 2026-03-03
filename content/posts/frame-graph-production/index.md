@@ -27,11 +27,11 @@ This article cracks open **UE5's RDG** and **Frostbite's FrameGraph** to see how
 
 ---
 
-## ① Declare: Pass & Resource Registration
+## Declare: Pass & Resource Registration
 
 Every engine starts the same way: passes declare what they read and write, resources are requested by description, and the graph accumulates edges. The differences are in *how* that declaration happens.
 
-### 🔧 UE5 RDG
+### UE5 RDG
 
 Each `AddPass` takes a parameter struct + execute lambda. The struct *is* the setup phase: macros generate metadata, RDG extracts dependency edges:
 
@@ -75,11 +75,11 @@ Each `AddPass` takes a parameter struct + execute lambda. The struct *is* the se
   </div>
 </div>
 
-### ❄️ Frostbite
+### Frostbite
 
 Frostbite's GDC 2017 talk described a similar lambda-based declaration: setup lambda declares reads/writes, execute lambda records GPU commands. The exact current implementation isn't public.
 
-### 🔄 What's different from our MVP
+### What's different from our MVP
 
 <div class="diagram-ftable">
 <table>
@@ -93,7 +93,7 @@ Frostbite's GDC 2017 talk described a similar lambda-based declaration: setup la
 
 ---
 
-## ⚙️ Compile: The Graph Compiler at Scale
+## Compile: The Graph Compiler at Scale
 
 This is where production engines diverge most from our MVP. The compile phase runs entirely on the CPU, between declaration and execution. Our MVP does five things here: topo-sort, cull, scan lifetimes, alias, and compute barriers. Production engines do the same five, plus async compute scheduling, split barrier placement, and barrier batching.
 
@@ -125,11 +125,11 @@ This is where production engines diverge most from our MVP. The compile phase ru
 
 Every step below is a compile-time operation. No GPU work, no command recording. The compiler sees the full DAG and makes optimal decisions the pass author never has to think about.
 
-### ✂️ Pass culling
+### Pass culling
 
 Same algorithm as our MVP (backward reachability from the output), but at larger scale. UE5 uses refcount-based culling and skips allocation entirely for culled passes (saves transient allocator work). Culled passes never execute, never allocate resources, never emit barriers. They vanish as if they were never declared.
 
-### 💾 Memory aliasing
+### Memory aliasing
 
 Both engines use the same core algorithm from [Part II](/posts/frame-graph-build-it/): lifetime scanning + free-list allocation. The production refinements:
 
@@ -145,7 +145,7 @@ Both engines use the same core algorithm from [Part II](/posts/frame-graph-build
 
 Our MVP allocates fresh each frame. Production engines **pool across frames**: once a heap is allocated, it persists and gets reused. UE5's transient allocator (controlled via `r.RDG.TransientAllocator`) tracks peak usage over several frames and only grows the pool when needed. Frostbite described the same pattern at GDC 2017: heaps survive across frames, the allocator remembers the high-water mark, and unused blocks are released only after several frames of lower demand, avoiding the alloc/free churn that would otherwise dominate the CPU cost of transient resources. This amortizes allocation cost to near zero in steady state.
 
-### ⚡ Async compute scheduling
+### Async compute scheduling
 
 Async compute lets the GPU overlap independent work on separate hardware queues: compute shaders running alongside rasterization. The compiler must identify which passes can safely run async, insert cross-queue fences, and manage resource ownership transfers.
 
@@ -156,7 +156,7 @@ Async compute lets the GPU overlap independent work on separate hardware queues:
 
 **Hardware reality:** NVIDIA uses separate async engines. AMD exposes more independent CUs. Some GPUs just time-slice, so always profile to confirm real overlap. Vulkan requires explicit queue family ownership transfer. D3D12 uses `ID3D12Fence`. Both are expensive. Only use them if the overlap wins exceed the transfer cost.
 
-### 🚧 Barrier batching & split barriers
+### Barrier batching & split barriers
 
 Our MVP inserts one barrier at a time. Production engines batch multiple transitions into a single API call and split barriers across pass gaps for better GPU pipelining.
 
@@ -166,17 +166,17 @@ Diminishing returns on desktop. Modern drivers hide barrier latency internally. 
 
 ---
 
-## ▶️ Execute: Recording & Submission
+## Execute: Recording & Submission
 
 After the compiler finishes, every decision has been made: pass order, memory layout, barrier placement, physical resource bindings. The execute phase just walks the plan and records GPU commands. No allocation happens here. That's all done during compile, which makes execute safe to parallelize and the compiled plan cacheable across frames. Here's where production engines scale beyond our MVP.
 
-### 🧵 Parallel command recording
+### Parallel command recording
 
 Our MVP records on a single thread. Production engines split the sorted pass list into groups and record each group on a separate thread using secondary command buffers (Vulkan) or command lists (D3D12), then merge at submit.
 
 UE5 creates parallel `FRHICommandList` instances (one per pass group) and joins them before queue submission. This is where the bulk of CPU frame time goes in a graph-based renderer, so parallelizing it matters.
 
-### 🔗 Bindless & the frame graph
+### Bindless & the frame graph
 
 Traditional bound descriptors require the executor to know each pass's binding layout (which slots expect textures, which expect UAVs) and to set up descriptor sets or root signatures before every dispatch. Bindless flips that: one global descriptor heap holds every resource, and shaders index into it directly (`ResourceDescriptorHeap[idx]`). This changes the execute loop significantly.
 
@@ -192,7 +192,7 @@ Traditional bound descriptors require the executor to know each pass's binding l
 
 Bindless doesn't change the DAG or the compile phase: sorting, culling, aliasing, and barriers work identically. What it simplifies is the *execution* side: the executor becomes a thin loop that sets a few root constants and dispatches, because every resource is already visible in the global heap. The cost is that you lose API-level validation. A missed `read()` declaration won't trigger a binding error, it'll silently access stale data.
 
-### 🔀 The RDG–legacy boundary (UE5)
+### The RDG–legacy boundary (UE5)
 
 The biggest practical consideration with RDG is the seam between RDG-managed passes and legacy `FRHICommandList` code. At this boundary:
 
@@ -202,14 +202,14 @@ The biggest practical consideration with RDG is the seam between RDG-managed pas
 
 This boundary is shrinking every release as Epic migrates more passes to RDG, but in practice you'll still hit it when integrating third-party plugins or older rendering features.
 
-### 🔍 Debug & visualization
+### Debug & visualization
 
 <div style="display:flex;align-items:flex-start;gap:.8em;border:1px solid rgba(var(--ds-success-rgb),.2);border-radius:10px;padding:1em 1.2em;margin:1em 0;background:linear-gradient(135deg,rgba(var(--ds-success-rgb),.05),transparent)">
   <span style="font-size:1.4em;line-height:1">🔍</span>
   <div style="font-size:.9em;line-height:1.55"><strong>RDG Insights.</strong> Enable via the Unreal editor to visualize the full pass graph, resource lifetimes, and barrier placement. Use <code>r.RDG.Debug</code> CVars for validation: <code>r.RDG.Debug.FlushGPU</code> serializes execution for debugging, <code>r.RDG.Debug.ExtendResourceLifetimes</code> disables aliasing to isolate corruption bugs. The frame is data. Export it, diff it, analyze offline.</div>
 </div>
 
-### 📂 Navigating UE5 RDG
+### Navigating UE5 RDG
 
 <div class="diagram-steps">
   <div class="ds-step">
@@ -230,7 +230,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
   </div>
 </div>
 
-### 🗺️ UE5 RDG: current state & roadmap
+### UE5 RDG: current state & roadmap
 
 <div class="diagram-limits">
   <div class="dl-title">RDG: Current Engineering Trade-offs</div>
@@ -242,7 +242,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
 
 ---
 
-## 🏁 Closing
+## Closing
 
 A render graph is not always the right answer. If your project has a fixed pipeline with 3–4 passes that will never change, the overhead of a graph compiler is wasted complexity. But the moment your renderer needs to *grow* (new passes, new platforms, new debug tools), the graph pays for itself in the first week.
 
@@ -254,7 +254,7 @@ The point isn't that every project needs a render graph. The point is that if yo
 
 ---
 
-## 📚 Resources
+## Resources
 
 - **[Rendergraphs & High Level Rendering: Wijiler (YouTube)](https://www.youtube.com/watch?v=FBYg64QKjFo)**: 15-minute visual intro to render graphs and modern graphics APIs.
 - **[Render Graphs: GPUOpen](https://gpuopen.com/learn/render-graphs/)**: AMD's overview covering declare/compile/execute, barriers, and aliasing.

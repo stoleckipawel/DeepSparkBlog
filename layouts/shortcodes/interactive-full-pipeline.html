@@ -398,54 +398,98 @@ function renderMinimap(opts){
 
   var maxCol=0,maxRow=0;
   passes.forEach(function(p){if(p.col>maxCol)maxCol=p.col;if(p.row>maxRow)maxRow=p.row});
-  var W=MM_PAD*2+maxCol*MM_CG+MM_NW;
-  var H=MM_PAD*2+maxRow*MM_RG+MM_NH;
+
+  /* Extra space: topo badges extend right; alias strip adds bottom space */
+  var aliasStripH=(opts.alias&&aliasInfo&&aliasInfo.totalBlocks>0)?48:0;
+  var W=MM_PAD*2+maxCol*MM_CG+MM_NW+(opts.topo?24:0);
+  var H=MM_PAD*2+maxRow*MM_RG+MM_NH+aliasStripH;
   svg.setAttribute("viewBox","0 0 "+W+" "+H);
-  /* Make minimap scrollable — set explicit width so it won't shrink */
   svg.style.width=Math.max(W,600)+"px";
   svg.style.minHeight=Math.max(110,H)+"px";
   svg.innerHTML="";
 
-  svg.append(el("rect",{x:0,y:0,width:W,height:H,fill:C.mmBg(),rx:6}));
+  /* Defs: hatch pattern for culled passes */
+  var defs=el("defs");
+  var hpat=el("pattern",{id:"pipe-hatch",width:"6",height:"6",patternUnits:"userSpaceOnUse",patternTransform:"rotate(45)"});
+  hpat.append(el("rect",{width:"2",height:"6",fill:"#6b7280",opacity:"0.18"}));
+  defs.append(hpat);
+  svg.append(defs);
 
+  svg.append(el("rect",{x:0,y:0,width:W,height:H,fill:C.mmBg(),rx:6}));
   passes.forEach(function(p){p.mx=MM_PAD+p.col*MM_CG;p.my=MM_PAD+p.row*MM_RG});
 
-  /* edges */
+  /* Precompute alive-only order for topo badges */
+  var aliveOrder=order.filter(function(id){return alive.has(id)});
+
+  /* ── Async: purple glow lane behind async-eligible passes ── */
+  if(opts.async){
+    passes.forEach(function(p){
+      if(p.canAsync&&alive.has(p.id)){
+        svg.append(el("rect",{x:p.mx-8,y:p.my-8,width:MM_NW+16,height:MM_NH+16,rx:14,
+          fill:C.async,opacity:"0.07"}));
+      }
+    });
+  }
+
+  /* ── Edges ── */
   edges.forEach(function(e){
-    var sp=passById[e.from];
-    var dp=passById[e.to];
+    var sp=passById[e.from],dp=passById[e.to];
     if(!sp||!dp)return;
     var both=alive.has(e.from)&&alive.has(e.to);
     var sx=sp.mx+MM_NW,sy=sp.my+MM_NH/2,dx=dp.mx,dy=dp.my+MM_NH/2;
     var cx1=sx+(dx-sx)*.4,cx2=sx+(dx-sx)*.6;
-    var attrs={d:"M"+sx+","+sy+" C"+cx1+","+sy+" "+cx2+","+dy+" "+dx+","+dy,
-      fill:"none",stroke:both?C.edge:C.edgeOff,"stroke-width":both?"1.5":"1",
-      opacity:both?"0.45":"0.12"};
-    if(!both)attrs["stroke-dasharray"]="3 2";
+    var pathD="M"+sx+","+sy+" C"+cx1+","+sy+" "+cx2+","+dy+" "+dx+","+dy;
+    /* Cross-queue edge (graphics ↔ async) */
+    var isCrossQ=opts.async&&both&&((sp.canAsync&&!dp.canAsync)||(!sp.canAsync&&dp.canAsync));
+    var edgeStroke=both?(isCrossQ?"var(--ds-warn)":C.edge):C.edgeOff;
+    var attrs={d:pathD,fill:"none",stroke:edgeStroke,
+      "stroke-width":both?(isCrossQ?"2":"1.5"):"0.8",
+      opacity:both?"0.45":"0.06"};
+    if(!both)attrs["stroke-dasharray"]="2 3";
+    if(isCrossQ)attrs["stroke-dasharray"]="6 3";
     svg.append(el("path",attrs));
-    if(both){
-      var mfAttrs={d:attrs.d,class:"flow flow-mini"};
-      svg.append(el("path",mfAttrs));
+    if(both)svg.append(el("path",{d:pathD,class:"flow flow-mini"}));
+    /* Fence badge on cross-queue edges */
+    if(isCrossQ){
+      var fmx=(sx+dx)/2,fmy=(sy+dy)/2;
+      svg.append(el("rect",{x:fmx-9,y:fmy-7,width:18,height:14,rx:3,fill:"var(--ds-warn)",opacity:"0.85"}));
+      svg.append(svgText(fmx,fmy,"F","#fff","9","700"));
     }
   });
 
-  /* barrier ticks */
+  /* ── Barrier markers ── */
   if(opts.barriers){
-    var bc={};barriers.forEach(function(b){bc[b.pass]=(bc[b.pass]||0)+1});
+    var bc={};
+    barriers.forEach(function(b){
+      if(!bc[b.pass])bc[b.pass]={count:0,items:[]};
+      bc[b.pass].count++;bc[b.pass].items.push(b);
+    });
     Object.keys(bc).forEach(function(pid){
       var p=passById[+pid];
       if(!p||!alive.has(p.id))return;
-      svg.append(el("line",{x1:p.mx-4,y1:p.my,x2:p.mx-4,y2:p.my+MM_NH,
-        stroke:C.barrier,"stroke-width":"2",opacity:"0.6","stroke-linecap":"round"}));
+      var cnt=bc[pid].count;
+      /* Red barrier gate */
+      svg.append(el("rect",{x:p.mx-12,y:p.my+2,width:8,height:MM_NH-4,rx:3,
+        fill:C.barrier,opacity:"0.55"}));
+      /* Count badge */
+      svg.append(el("circle",{cx:p.mx-8,cy:p.my-5,r:9,fill:C.barrier,opacity:"0.9"}));
+      svg.append(svgText(p.mx-8,p.my-5,""+cnt,"#fff","8","700"));
+      /* Transition label */
+      var ft=bc[pid].items[0];
+      var tl=ft.from.charAt(0)+"\u2192"+ft.to.charAt(0);
+      if(cnt>1)tl=""+cnt+"\u00d7";
+      svg.append(svgText(p.mx-8,p.my+MM_NH+8,tl,C.barrier,"7","500"));
     });
   }
 
-  /* nodes */
+  /* ── Nodes ── */
   passes.forEach(function(p){
     var isAlive=alive.has(p.id),isOut=p.id===outputId,isAsync=opts.async&&p.canAsync;
     var isSel=selectedPass===p.id;
     var fill=isOut?C.output:isAsync?C.async:isAlive?C.alive:C.dead;
     var g=el("g",{"class":"mm-node"});
+    var maxChars=11;
+    var label=p.name.length>maxChars?p.name.slice(0,maxChars-1)+"\u2026":p.name;
 
     /* selection ring */
     if(isSel){
@@ -453,25 +497,61 @@ function renderMinimap(opts){
         fill:"none",stroke:"#fff","stroke-width":"2",opacity:"0.7"}));
     }
 
-    var strokeCol=isOut?"#d97706":isAsync?"#7c3aed":isAlive?"#16a34a":"#4b5563";
-    g.append(el("rect",{x:p.mx,y:p.my,width:MM_NW,height:MM_NH,rx:8,
-      fill:fill,opacity:isAlive?"1":"0.3",stroke:isSel?"#fff":strokeCol,"stroke-width":isSel?"2":"1"}));
+    if(!isAlive&&opts.cull){
+      /* ── Culled pass: dramatic fade + crosshatch + red X ── */
+      g.append(el("rect",{x:p.mx,y:p.my,width:MM_NW,height:MM_NH,rx:8,
+        fill:C.dead,opacity:"0.1",stroke:"#4b5563","stroke-width":"1","stroke-dasharray":"4 2"}));
+      g.append(el("rect",{x:p.mx,y:p.my,width:MM_NW,height:MM_NH,rx:8,
+        fill:"url(#pipe-hatch)"}));
+      /* Large red X */
+      var cx=p.mx+MM_NW/2,cy=p.my+MM_NH/2;
+      g.append(el("line",{x1:cx-12,y1:cy-9,x2:cx+12,y2:cy+9,
+        stroke:"#ef4444","stroke-width":"2.5",opacity:"0.5","stroke-linecap":"round"}));
+      g.append(el("line",{x1:cx+12,y1:cy-9,x2:cx-12,y2:cy+9,
+        stroke:"#ef4444","stroke-width":"2.5",opacity:"0.5","stroke-linecap":"round"}));
+      var dt=svgText(p.mx+MM_NW/2,p.my+MM_NH/2,label,"#fff","11","500");
+      dt.setAttribute("opacity","0.15");g.append(dt);
+    } else {
+      /* ── Active pass ── */
+      var strokeCol=isOut?"#d97706":isAsync?"#7c3aed":isAlive?"#16a34a":"#4b5563";
+      g.append(el("rect",{x:p.mx,y:p.my,width:MM_NW,height:MM_NH,rx:8,
+        fill:fill,opacity:isAlive?"1":"0.3",stroke:isSel?"#fff":strokeCol,"stroke-width":isSel?"2":"1"}));
+      g.append(svgText(p.mx+MM_NW/2,p.my+MM_NH/2,label,"#fff","12","600"));
 
-    var maxChars=11;
-    var label=p.name.length>maxChars?p.name.slice(0,maxChars-1)+"\u2026":p.name;
-    var t=svgText(p.mx+MM_NW/2,p.my+MM_NH/2,isAlive?label:label+" \u2717","#fff","12","600");
-    t.setAttribute("opacity",isAlive?"1":"0.4");
-    g.append(t);
-
-    /* alias color bar */
-    if(opts.alias&&aliasInfo){
-      edges.filter(function(ee){return ee.from===p.id&&alive.has(p.id)}).forEach(function(ee){
-        var bi=aliasInfo.resBlock[ee.res];
-        if(bi!==undefined&&aliasInfo.blocks[bi].resources.length>1){
-          svg.append(el("rect",{x:p.mx,y:p.my+MM_NH+1,width:MM_NW,height:3,rx:1,
-            fill:C.alias[bi%C.alias.length],opacity:"0.5"}));
+      /* Topo order badge (numbered circle) */
+      if(opts.topo&&isAlive){
+        var oi=aliveOrder.indexOf(p.id);
+        if(oi>=0){
+          svg.append(el("circle",{cx:p.mx+MM_NW+3,cy:p.my-1,r:10,
+            fill:dark?"#1e1b2e":"#fff",stroke:fill,"stroke-width":"1.5"}));
+          svg.append(svgText(p.mx+MM_NW+3,p.my-1,""+(oi+1),fill,"9","700"));
         }
+      }
+
+      /* Async queue chip */
+      if(isAsync&&isAlive){
+        svg.append(el("rect",{x:p.mx+MM_NW/2-18,y:p.my+MM_NH+2,width:36,height:12,rx:3,
+          fill:C.async,opacity:"0.4"}));
+        svg.append(svgText(p.mx+MM_NW/2,p.my+MM_NH+8,"ASYNC","#fff","7","700"));
+      }
+    }
+
+    /* Alias color bars */
+    if(opts.alias&&aliasInfo&&isAlive){
+      var seenB=new Set();
+      edges.filter(function(ee){return ee.from===p.id||ee.to===p.id}).forEach(function(ee){
+        var bi=aliasInfo.resBlock[ee.res];
+        if(bi!==undefined&&aliasInfo.blocks[bi].resources.length>1)seenB.add(bi);
       });
+      var barArr=Array.from(seenB);
+      if(barArr.length>0){
+        var bw=MM_NW/barArr.length;
+        var by=p.my+MM_NH+(isAsync?16:2);
+        barArr.forEach(function(bi,idx){
+          svg.append(el("rect",{x:p.mx+idx*bw,y:by,width:bw-1,height:5,rx:1,
+            fill:C.alias[bi%C.alias.length],opacity:"0.7"}));
+        });
+      }
     }
 
     g.addEventListener("click",function(){
@@ -480,6 +560,25 @@ function renderMinimap(opts){
     });
     svg.append(g);
   });
+
+  /* ── VRAM aliasing strip ── */
+  if(opts.alias&&aliasInfo&&aliasInfo.totalBlocks>0){
+    var stripY=MM_PAD+maxRow*MM_RG+MM_NH+22;
+    svg.append(svgText(MM_PAD,stripY-4,"VRAM  "+aliasInfo.totalBlocks+" physical \u2190 "+aliasInfo.totalRes+" virtual",C.textMuted(),"9","600","start"));
+    var totW=W-MM_PAD*2;
+    var bw=totW/aliasInfo.totalRes;
+    var bx=MM_PAD;
+    for(var bi=0;bi<aliasInfo.blocks.length;bi++){
+      var blk=aliasInfo.blocks[bi];
+      var w=bw*blk.resources.length;
+      svg.append(el("rect",{x:bx,y:stripY,width:w-2,height:16,rx:3,
+        fill:C.alias[bi%C.alias.length],opacity:blk.resources.length>1?"0.6":"0.25"}));
+      if(blk.resources.length>1){
+        svg.append(svgText(bx+w/2,stripY+8,blk.resources.length+"\u00d7","#fff","8","700"));
+      }
+      bx+=w;
+    }
+  }
 }
 
 /* ─── Focus view ─── */
@@ -681,25 +780,36 @@ function renderStats(opts){
   var asyncPasses=0;if(opts.async)passes.forEach(function(p){if(p.canAsync&&cachedAlive.has(p.id))asyncPasses++});
 
   var s="<div class='pipe-stat' style='border-color:"+C.alive+";color:"+C.alive+"'><span class='pipe-stat-val'>"+alivePasses+"</span><span class='pipe-stat-lbl'>Active</span></div>";
+  if(opts.topo)s+="<div class='pipe-stat' style='border-color:"+C.edge+";color:"+C.edge+"'><span class='pipe-stat-val'>"+alivePasses+"</span><span class='pipe-stat-lbl'>Steps</span></div>";
   if(opts.cull)s+="<div class='pipe-stat' style='border-color:"+C.dead+";color:"+C.dead+"'><span class='pipe-stat-val'>"+culledPasses+"</span><span class='pipe-stat-lbl'>Culled</span></div>";
-  s+="<div class='pipe-stat' style='border-color:"+C.edge+";color:"+C.edge+"'><span class='pipe-stat-val'>"+implicitEdges+"</span><span class='pipe-stat-lbl'>Implicit Deps</span></div>";
+  s+="<div class='pipe-stat' style='border-color:"+C.edge+";color:"+C.edge+"'><span class='pipe-stat-val'>"+implicitEdges+"</span><span class='pipe-stat-lbl'>Deps</span></div>";
   if(opts.barriers)s+="<div class='pipe-stat' style='border-color:"+C.barrier+";color:"+C.barrier+"'><span class='pipe-stat-val'>"+cachedBarriers.length+"</span><span class='pipe-stat-lbl'>Barriers</span></div>";
-  if(opts.async)s+="<div class='pipe-stat' style='border-color:"+C.async+";color:"+C.async+"'><span class='pipe-stat-val'>"+asyncPasses+"</span><span class='pipe-stat-lbl'>Async</span></div>";
+  if(opts.async){
+    var fenceCount=0;
+    edges.forEach(function(e){
+      if(cachedAlive.has(e.from)&&cachedAlive.has(e.to)){
+        var sp=passById[e.from],dp=passById[e.to];
+        if((sp.canAsync&&!dp.canAsync)||(!sp.canAsync&&dp.canAsync))fenceCount++;
+      }
+    });
+    s+="<div class='pipe-stat' style='border-color:"+C.async+";color:"+C.async+"'><span class='pipe-stat-val'>"+asyncPasses+"</span><span class='pipe-stat-lbl'>Async</span></div>";
+    s+="<div class='pipe-stat' style='border-color:var(--ds-warn);color:var(--ds-warn)'><span class='pipe-stat-val'>"+fenceCount+"</span><span class='pipe-stat-lbl'>Fences</span></div>";
+  }
   if(opts.alias&&cachedAlias)s+="<div class='pipe-stat' style='border-color:var(--ds-teal);color:var(--ds-teal)'><span class='pipe-stat-val'>"+cachedAlias.saved+"%</span><span class='pipe-stat-lbl'>VRAM Saved</span></div>";
   statsDiv.innerHTML=s;
 
-  var feats=[];
-  if(opts.topo)feats.push("topologically sorted");
-  if(opts.cull)feats.push(culledPasses+" passes culled");
-  if(opts.barriers)feats.push(cachedBarriers.length+" barriers auto-inserted");
-  if(opts.async)feats.push(asyncPasses+" async-eligible passes");
-  if(opts.alias&&cachedAlias)feats.push(cachedAlias.saved+"% VRAM saved via aliasing");
-
-  if(feats.length===0){
-    detailDiv.innerHTML="<strong>All features off.</strong> This is what you'd manage by hand \u2014 "+totalPasses+" passes, "+implicitEdges+" resource dependencies, every barrier and memory decision manual. Toggle features above to see the compiler work.";
-  }else{
-    detailDiv.innerHTML="<strong>Compiler output:</strong> "+feats.join(" \u00B7 ")+". Every dependency was inferred from <code>read()</code>/<code>write()</code> calls \u2014 click a pass in the minimap to see exactly what's implicit.";
+  var lines=[];
+  if(!opts.topo&&!opts.cull&&!opts.barriers&&!opts.async&&!opts.alias){
+    lines.push("<strong>All features off.</strong> This is what you'd manage by hand \u2014 "+totalPasses+" passes, "+implicitEdges+" resource dependencies, every barrier and memory decision manual.");
+    lines.push("Toggle features above to see each compiler pass layer onto the graph.");
+  } else {
+    if(opts.topo)lines.push("<strong style='color:"+C.edge+"'>Topo Sort</strong> \u2014 circled numbers show execution order. Every dependency runs before its consumer.");
+    if(opts.cull)lines.push("<strong style='color:"+C.dead+"'>Culling</strong> \u2014 "+culledPasses+" dead pass"+(culledPasses!==1?"es":"")+" eliminated (hatched with \u2717). No path to the output node \u2192 removed.");
+    if(opts.barriers)lines.push("<strong style='color:"+C.barrier+"'>Barriers</strong> \u2014 "+cachedBarriers.length+" state transition"+(cachedBarriers.length!==1?"s":"")+" auto-inserted (red gates with count badges). Each marks a GPU resource state change.");
+    if(opts.async)lines.push("<strong style='color:"+C.async+"'>Async</strong> \u2014 "+asyncPasses+" compute pass"+(asyncPasses!==1?"es":"")+" moved to the async queue (purple glow + ASYNC label). Orange F badges = GPU fences at cross-queue sync points.");
+    if(opts.alias&&cachedAlias)lines.push("<strong style='color:var(--ds-teal)'>Aliasing</strong> \u2014 "+cachedAlias.totalRes+" virtual resources packed into "+cachedAlias.totalBlocks+" physical blocks ("+cachedAlias.saved+"% VRAM saved). Color bars on nodes show shared memory; the VRAM strip shows allocation.");
   }
+  detailDiv.innerHTML=lines.join("<br>");
 }
 
 /* ─── Main render ─── */

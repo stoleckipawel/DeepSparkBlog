@@ -43,7 +43,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
 
 ---
 
-## 🔥 The Problem
+## The Problem
 
 <div class="fg-reveal" style="position:relative;margin:1.4em 0;">
 
@@ -101,7 +101,7 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
 
 The pattern is always the same: manual resource management works at small scale and fails at compound scale. Not because engineers are sloppy. Because *no human tracks 25 lifetimes and 47 transitions in their head at once*. You need a system that sees the whole frame at once.
 
-## 💡 The Core Idea
+## The Core Idea
 
 A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass. Each edge carries a resource: a texture, a buffer, or an attachment, from the pass that writes it to every pass that reads it. Here's what an example deferred-rendering frame looks like:
 
@@ -177,21 +177,21 @@ Every frame follows a three-phase lifecycle:
 
 <!-- 3-step lifecycle, vertical cards with descriptions, clickable -->
 <div style="margin:1.5em 0 2em;display:grid;grid-template-columns:1fr;gap:.6em;max-width:620px;">
-  <a href="#-the-declare-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-info-rgb),.05);border-left:4px solid var(--ds-info-light);text-decoration:none;color:inherit;transition:background .22s ease;">
+  <a href="#the-declare-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-info-rgb),.05);border-left:4px solid var(--ds-info-light);text-decoration:none;color:inherit;transition:background .22s ease;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-info-light);text-align:center;">①</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-info-light);letter-spacing:.03em;">DECLARE</div>
       <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Build the graph: passes, resources, edges. No GPU work yet.</div>
     </div>
   </a>
-  <a href="#-the-compile-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-code-rgb),.05);border-left:4px solid var(--ds-code-light);text-decoration:none;color:inherit;transition:background .22s ease;">
+  <a href="#the-compile-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-code-rgb),.05);border-left:4px solid var(--ds-code-light);text-decoration:none;color:inherit;transition:background .22s ease;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-code-light);text-align:center;">②</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-code-light);letter-spacing:.03em;">COMPILE</div>
       <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Analyze the graph: sort, cull, alias memory, compute barriers.</div>
     </div>
   </a>
-  <a href="#-the-execute-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-success-rgb),.05);border-left:4px solid var(--ds-success);text-decoration:none;color:inherit;transition:background .22s ease;">
+  <a href="#the-execute-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-success-rgb),.05);border-left:4px solid var(--ds-success);text-decoration:none;color:inherit;transition:background .22s ease;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-success);text-align:center;">③</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-success);letter-spacing:.03em;">EXECUTE</div>
@@ -202,11 +202,11 @@ Every frame follows a three-phase lifecycle:
 
 ---
 
-## 📋 The Declare Step
+## The Declare Step
 
 The declare step is pure CPU work: you're building a **description** of what this frame needs, not executing it. The key principle: separate *what to do* from *doing it*, because the compiler needs to see everything before it can optimize anything.
 
-### 🔧 Registering a pass
+### Registering a pass
 
 A pass is a logical unit of GPU work. It might contain a single compute dispatch or hundreds of draw calls. To add one you give the graph two things:
 
@@ -228,7 +228,7 @@ A pass is a logical unit of GPU work. It might contain a single compute dispatch
 
 The setup callback is where everything that matters for the compiler happens: read, write, and create declarations build the edges and resource descriptors that drive sorting, barriers, and aliasing. The execute callback is opaque to the compiler. It just gets invoked at the right time with the right resources bound.
 
-### 📦 Virtual resources
+### Virtual resources
 
 When a pass creates a resource, the graph stores only a **descriptor**: dimensions, format, usage flags. No GPU memory is allocated. The resource is *virtual*: an opaque handle the compiler tracks, backed by nothing until the compile step decides where it lives in physical memory.
 
@@ -267,7 +267,7 @@ Virtual resources fall into two categories:
   </div>
 </div>
 
-### 🔗 Reads, writes, and edges
+### Reads, writes, and edges
 
 Each read or write you declare in a setup callback forms a connection in the dependency graph:
 
@@ -324,7 +324,7 @@ These versioned edges are the raw material the compiler works with. Every step t
 
 ---
 
-## ⚙ The Compile Step
+## The Compile Step
 
 Once every pass has declared its resources and dependencies, the compiler takes over. It receives the raw DAG (passes, virtual resources, read/write edges) and transforms it into a concrete execution plan: a sorted pass order, aliased memory layout, and a complete barrier schedule. This entire analysis happens on the CPU, over plain integers and small arrays.
 
@@ -351,7 +351,7 @@ Once every pass has declared its resources and dependencies, the compiler takes 
   </div>
 </div>
 
-###  Sorting
+### Sorting
 
 Before the GPU can execute anything, the compiler needs to turn the DAG into an ordered schedule. The rule is simple: **no pass runs before the passes it depends on**. This is called a **topological sort**.
 
@@ -368,7 +368,7 @@ The algorithm most compilers use is **Kahn's algorithm**. Think of it like a to-
 
 > **Sorting bonus: fewer state switches.** Kahn's algorithm often has several passes ready at the same time, which gives the compiler freedom to choose among them. A sort-time heuristic can use that freedom to group passes that share GPU state, reducing expensive context rolls. A topological sort doesn't just guarantee correctness. It creates scheduling slack the compiler can exploit for performance.
 
-### ✂ Culling
+### Culling
 
 Once the sort gives us a valid execution order, the compiler can ask a powerful question: **does every pass actually contribute to the final image?**
 
@@ -385,7 +385,7 @@ The algorithm is simple: start from every output the frame needs (typically just
 
 {{< interactive-dag >}}
 
-### 💾 Allocation and aliasing
+### Allocation and aliasing
 
 The sorted order tells the compiler exactly when each resource is first written and last read: its **lifetime**. Two resources whose lifetimes don't overlap can share the same physical memory, even if they're completely different formats or sizes. The GPU allocates one large heap and places multiple resources at different offsets within it.
 
@@ -409,7 +409,7 @@ The allocator works in two passes: first, walk the sorted pass list and record e
 
 {{< interactive-aliasing >}}
 
-### 🚧 Barriers
+### Barriers
 
 A GPU resource can't be a render target and a shader input at the same time. The hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash. Add an unnecessary one and the GPU stalls waiting for nothing.
 
@@ -425,7 +425,7 @@ The result is a compiled plan where each pass carries a list of pre-barriers alo
 
 ---
 
-## ▶ The Execute Step
+## The Execute Step
 
 The plan is ready. Now the GPU gets involved. Every decision has already been made during compile: pass order, memory layout, barriers, physical resource bindings. Execute just walks the plan.
 
@@ -446,7 +446,7 @@ This is deliberate. The entire point of the declare/compile split is to front-lo
 
 Each execute lambda sees a fully resolved environment: barriers already computed and stored in the plan, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
 
-### 🧵 Parallel command recording
+### Parallel command recording
 
 The compiled plan doesn't just decide *what* runs. It reveals *what can run at the same time*. Because each lambda only touches its own declared resources and all barriers are precomputed, the engine knows exactly which passes are independent and can record them on separate CPU threads simultaneously.
 
@@ -463,13 +463,13 @@ The compiled plan doesn't just decide *what* runs. It reveals *what can run at t
 
 The scalability gain comes from the DAG itself: passes at the same depth in the topological order have no edges between them, so recording them in parallel requires no additional synchronization. The more independent passes a frame has, the more CPU cores stay busy, and modern frames have plenty of independence (shadow cascades, GBuffer, SSAO, and bloom often share a depth level).
 
-### 🧹 Cleanup and reset
+### Cleanup and reset
 
 After every pass has been recorded, cleanup is trivial. The frame graph was designed around single-frame lifetimes, so there's nothing to track individually. The system just resets the transient memory pool in one shot (every GBuffer, scratch texture, and temporary buffer vanishes together). Imported resources like the swapchain, TAA history, or shadow atlas aren't touched. They belong to external systems and persist across frames. The graph object itself clears its pass list and resource table, leaving it empty and ready for the next frame's declare phase to start fresh. This reset-and-rebuild cycle is what lets engines add or remove passes freely without any teardown logic.
 
 ---
 
-## 🔄 Rebuild Strategies
+## Rebuild Strategies
 
 How often should the graph recompile? Three approaches, each a valid tradeoff:
 
@@ -515,7 +515,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 ---
 
-## 💰 The Payoff
+## The Payoff
 
 <div class="fg-compare ds-grid-2col" style="gap:0;border-radius:12px;overflow:hidden;border:2px solid rgba(var(--ds-indigo-rgb),.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
   <div class="ds-card-header ds-card-header--danger" style="border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);">❌ Without Graph</div>
@@ -585,7 +585,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 ---
 
-### 🔮 What's next
+### What's next
 
 That's the full theory (sorting, culling, barriers, aliasing), everything a frame graph compiler does. [Part II: Build It](../frame-graph-build-it/) turns every concept from this article into running C++, three iterations from blank file to a working `FrameGraph` class with automatic barriers and memory aliasing.
 

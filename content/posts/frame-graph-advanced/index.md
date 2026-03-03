@@ -23,21 +23,19 @@ keywords: ["async compute", "split barriers", "GPU queue", "fence minimization",
 
 ---
 
-## ⚡ Async Compute
+## Async Compute
 
 Barriers optimize work on a single GPU queue. But modern GPUs expose at least two: a **graphics queue** and a **compute queue**. If two passes have **no dependency path between them** in the DAG, the compiler can schedule them on different queues simultaneously.
 
-### 🔍 Finding parallelism
+### Finding parallelism
 
 The compiler needs to answer one question for every pair of passes: **can these run at the same time?** Two passes can overlap only if neither depends on the other, directly or indirectly. A pass that writes the GBuffer can't overlap with lighting (which reads it), but it *can* overlap with SSAO if they share no resources.
 
-<div class="ext-ref"><a href="https://advances.realtimerendering.com/s2016/Wihlidal_LogisticalNightmares.pptx">id Software — Doom (2016), SIGGRAPH 2016</a> — async compute on AMD GCN showed 5–8% GPU-time savings by overlapping shadow map compute with geometry rasterization</div>
-
 The algorithm is called **reachability analysis**: for each pass, the compiler figures out every other pass it can eventually reach by following edges forward through the DAG. If pass A can reach pass B (or B can reach A), they're dependent. If neither can reach the other, they're **independent** and safe to run on separate queues.
 
-### 🔗 Minimizing fences
+### Minimizing fences
 
-Cross-queue work needs **GPU fences**: one queue signals, the other waits. Each fence adds dead GPU time: NVIDIA notes that async workloads under ~0.2 ms are unlikely to show any benefit because fence resolution overhead alone eats the gain (["Advanced API Performance: Async Compute"](https://developer.nvidia.com/blog/advanced-api-performance-async-compute/)), and AMD's RDNA Performance Guide advises minimizing queue synchronization because "each fence has a CPU and GPU cost" ([GPUOpen](https://gpuopen.com/learn/rdna-performance-guide/)). Move SSAO, volumetrics, and particle sim to compute and you can create several fences, and the accumulated idle time can erase the overlap gain. The compiler applies **transitive reduction** to collapse those down:
+Cross-queue work needs **GPU fences**: one queue signals, the other waits. Each fence adds dead GPU time: async workloads under ~0.2 ms are unlikely to show any benefit because fence resolution overhead alone eats the gain, and AMD's RDNA Performance Guide advises minimizing queue synchronization because "each fence has a CPU and GPU cost" ([GPUOpen](https://gpuopen.com/learn/rdna-performance-guide/)). Offload three passes to async compute and you might need three separate fences — one per synchronization point — and the accumulated stall time from waiting on all of them can negate the overlap benefit entirely. The compiler applies **transitive reduction** to collapse those down:
 
 <div class="fg-grid-stagger ds-grid-2col">
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(var(--ds-danger-rgb),.25);overflow:hidden;">
@@ -65,7 +63,7 @@ Cross-queue work needs **GPU fences**: one queue signals, the other waits. Each 
   </div>
 </div>
 
-### ⚖ What makes overlap good or bad
+### What makes overlap good or bad
 
 Solving fences is the easy part. The compiler handles that. The harder question is whether overlapping two specific passes actually helps:
 
@@ -84,7 +82,7 @@ Solving fences is the easy part. The compiler handles that. The harder question 
   </div>
 </div>
 
-### 🤔 Should this pass go async?
+### Should this pass go async?
 
 <div style="margin:1.5em 0;display:flex;align-items:stretch;gap:0;font-size:.88em;">
   <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;">
@@ -113,15 +111,13 @@ Solving fences is the easy part. The compiler handles that. The harder question 
 </div>
 <div style="font-size:.82em;opacity:.6;margin-top:-.2em;text-align:center;">Good candidates: SSAO alongside ROP-bound geometry, volumetrics during shadow rasterization, particle sim during UI.</div>
 
-<div class="ext-ref"><a href="https://www.activision.com/cdn/research/2020-02_GPUDrivenRendering.pdf">Call of Duty: Modern Warfare (2019) — GDC 2020</a> — IW engine overlaps SSAO + shadow compute with geometry passes on the async queue, reporting ~15% frame-time improvement</div>
-
 Try it yourself: move compute-eligible passes between queues and see how fence count and frame time change:
 
 {{< interactive-async >}}
 
 ---
 
-## ✂️ Split Barriers
+## Split Barriers
 
 Async compute hides latency by overlapping work across *queues*. Split barriers achieve the same effect on a *single queue*, by spreading one resource transition across multiple passes instead of stalling on it.
 
@@ -177,7 +173,7 @@ The passes between begin and end are the **overlap gap**, executing while the ca
 
 <div class="ext-ref"><a href="https://github.com/microsoft/DirectX-Graphics-Samples/tree/master/MiniEngine">D3D12 MiniEngine — Microsoft DirectX Samples</a> — demonstrates split barrier patterns with <code>D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY</code> / <code>END_ONLY</code></div>
 
-### 📏 How much gap is enough?
+### How much gap is enough?
 
 <div class="fg-grid-stagger" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6em;margin:1.2em 0;">
   <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.03);padding:.7em .8em;text-align:center;">
@@ -204,7 +200,7 @@ The passes between begin and end are the **overlap gap**, executing while the ca
 
 ---
 
-## 🧩 Putting It All Together
+## Putting It All Together
 
 You've now seen every piece the compiler works with: topological sorting, pass culling, barrier computation, async compute scheduling, memory aliasing, split barriers. In a simple 5-pass pipeline these feel manageable. In a production renderer? You're looking at **15–25 passes, 30+ resource edges, and dozens of implicit dependencies**, all inferred from `read()` and `write()` calls that no human can hold in their head at once.
 
@@ -218,7 +214,7 @@ The explorer below is a production-scale graph. Toggle each compiler feature on 
 
 {{< interactive-full-pipeline >}}
 
-### 🔮 What's next
+### What's next
 
 Async compute and split barriers are compiler features: they plug into the same DAG we built in Part II. But how do production engines actually ship all of this at scale? [Part IV: Production Engines](../frame-graph-production/) examines UE5's RDG and Frostbite's FrameGraph side by side, covering parallel command recording, legacy migration, and the engineering trade-offs that only matter at 700+ passes per frame.
 
