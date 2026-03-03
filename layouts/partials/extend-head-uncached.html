@@ -4,3 +4,7 @@
 {{- with .Params.keywords }}
   <meta name="keywords" content="{{ delimit . ", " }}">
 {{- end }}
+
+{{/* SEO: Upgrade twitter card to large image for richer previews.
+     The theme emits twitter:card=summary; this second tag wins per spec. */}}
+<meta name="twitter:card" content="summary_large_image">

@@ -1250,10 +1250,7 @@ For each transient resource, scan existing physical blocks for one that is both 
 
 The aliasing barriers matter for correctness, not just bookkeeping. When a physical block changes occupant, the GPU's L2 cache may still hold stale data from the previous resource. D3D12 exposes this as `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Vulkan uses a `VkMemoryBarrier` on the heap region covering both the outgoing and incoming resource. Omitting these leads to corruption that's timing-dependent and GPU-vendor-specific, exactly the kind of bug that only shows up in the field.
 
-<div class="ds-callout ds-callout--info" style="font-size:.88em;">
-📝 <strong>Alignment and real GPU sizing.</strong>&ensp;
-Our <code>AllocSize()</code> rounds up to a 64 KB placement alignment, the same constraint real GPUs enforce when placing resources into shared heaps. Without alignment, two resources that appear to fit in the same block would overlap at the hardware level. The raw <code>BytesPerPixel()</code> calculation is still a simplification: production allocators query the driver for actual row padding, tiling overhead, and per-format alignment. The aliasing algorithm itself is unchanged. You just swap the size input.
-</div>
+Our `AllocSize()` rounds every resource up to **64 KB** — the placement alignment real GPUs require for shared heaps. The `BytesPerPixel()` calculation is intentionally simplified. A production allocator would query the driver instead — `GetResourceAllocationInfo` on D3D12 or `vkGetImageMemoryRequirements` on Vulkan — to account for row padding, tiling overhead, and per-format alignment. The aliasing algorithm stays the same; only the size input changes.
 
 That wraps v3. Starting from v2's compile/execute split, we added lifetime analysis, a greedy free-list allocator, and aliasing-aware barrier insertion, the same architecture Frostbite described at GDC 2017, and the same approach UE5 uses today for every transient `FRDGTexture` created through `FRDGBuilder::CreateTexture`. The graph now owns the full lifecycle: declare virtual resources → analyze dependencies → pack physical memory → precompute every barrier → execute as pure playback.
 

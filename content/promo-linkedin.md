@@ -1633,3 +1633,230 @@ What's the hardest part of render graph implementation you've hit? Barrier debug
 </div>
 
 </div><!-- end promo-lab -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     OG / SOCIAL THUMBNAIL — Frame Graph Series
+     1200×630 px — used for og:image and twitter:image across all
+     Frame Graph posts and series landing pages.
+     Export: screenshot the .og-thumb element at 2× (2400×1260) for retina.
+     ═══════════════════════════════════════════════════════════════ -->
+
+<style>
+/* ── OG Thumbnail 1200×630 ───────────────────────────────────── */
+.og-thumb-wrap {
+  max-width: 720px;
+  margin: 3em auto 1em;
+}
+.og-thumb-wrap h2 {
+  font-size: clamp(1.18rem, 1.25vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #FF9F1C;
+  margin: 0 0 .7em;
+  padding-bottom: .38em;
+  border-bottom: 1px solid rgba(255,159,28,.22);
+}
+.og-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1200 / 630;
+  background: linear-gradient(145deg, #0a0c14 0%, #0c0d12 40%, #111828 100%);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3.2em 3.6em;
+  box-shadow: 0 20px 40px rgba(0,0,0,.45);
+  isolation: isolate;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+/* Ambient glow spots */
+.og-thumb::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 12% 20%, rgba(255,159,28,.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 80%, rgba(94,198,255,.13) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 50%, rgba(129,140,248,.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+.og-thumb::after {
+  content: '';
+  position: absolute;
+  top: -60px; right: -80px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(129,140,248,.18), transparent 65%);
+  pointer-events: none;
+}
+.og-thumb * { position: relative; z-index: 1; }
+
+/* ── Brand line ──────────────────────────────────────────────── */
+.og-brand {
+  display: flex;
+  align-items: center;
+  gap: .55em;
+  margin-bottom: 1em;
+}
+.og-brand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #FF9F1C;
+  flex-shrink: 0;
+}
+.og-brand-name {
+  font-size: .85em;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+}
+
+/* ── Title ───────────────────────────────────────────────────── */
+.og-title {
+  font-size: clamp(2.2rem, 3.6vw, 3.4rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -.02em;
+  color: #fff;
+  margin: 0 0 .12em;
+}
+.og-title-accent {
+  color: #FF9F1C;
+}
+
+/* ── Subtitle ────────────────────────────────────────────────── */
+.og-subtitle {
+  font-size: clamp(.92rem, 1.2vw, 1.15rem);
+  font-weight: 500;
+  color: rgba(255,255,255,.52);
+  line-height: 1.4;
+  margin-bottom: 1.5em;
+  max-width: 70%;
+}
+
+/* ── 4-part roadmap strip ────────────────────────────────────── */
+.og-parts {
+  display: flex;
+  gap: .65em;
+}
+.og-part {
+  flex: 1;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  padding: .7em .85em;
+  display: flex;
+  flex-direction: column;
+  gap: .18em;
+}
+.og-part-num {
+  font-size: .65em;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  opacity: .45;
+  color: #fff;
+}
+.og-part-title {
+  font-size: .88em;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+}
+.og-part-sub {
+  font-size: .62em;
+  color: rgba(255,255,255,.38);
+  line-height: 1.3;
+}
+/* Color accents per part */
+.og-part.p1 { border-color: rgba(99,149,255,.25); }
+.og-part.p1 .og-part-num { color: #6395ff; }
+.og-part.p2 { border-color: rgba(255,159,28,.25); }
+.og-part.p2 .og-part-num { color: #FF9F1C; }
+.og-part.p3 { border-color: rgba(87,240,141,.25); }
+.og-part.p3 .og-part-num { color: #57f08d; }
+.og-part.p4 { border-color: rgba(198,130,255,.25); }
+.og-part.p4 .og-part-num { color: #c682ff; }
+
+/* ── Inline DAG decoration (right side) ──────────────────────── */
+.og-dag {
+  position: absolute;
+  right: 2.5em;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 180px;
+  height: 180px;
+  opacity: .18;
+  z-index: 0 !important;
+}
+.og-dag circle {
+  fill: rgba(255,255,255,.35);
+}
+.og-dag line {
+  stroke: rgba(255,255,255,.25);
+  stroke-width: 2;
+}
+</style>
+
+<div class="og-thumb-wrap">
+
+## OG / Social Thumbnail (1200×630)
+
+<div class="og-thumb" id="og-thumb">
+
+  <!-- Decorative DAG graph in background -->
+  <svg class="og-dag" viewBox="0 0 180 180">
+    <line x1="30" y1="50" x2="80" y2="30"/>
+    <line x1="30" y1="50" x2="70" y2="80"/>
+    <line x1="80" y1="30" x2="140" y2="50"/>
+    <line x1="70" y1="80" x2="140" y2="50"/>
+    <line x1="70" y1="80" x2="120" y2="130"/>
+    <line x1="140" y1="50" x2="155" y2="100"/>
+    <line x1="155" y1="100" x2="120" y2="130"/>
+    <line x1="120" y1="130" x2="155" y2="165"/>
+    <circle cx="30" cy="50" r="7"/>
+    <circle cx="80" cy="30" r="7"/>
+    <circle cx="70" cy="80" r="7"/>
+    <circle cx="140" cy="50" r="7"/>
+    <circle cx="120" cy="130" r="7"/>
+    <circle cx="155" cy="100" r="7"/>
+    <circle cx="155" cy="165" r="7"/>
+  </svg>
+
+  <div class="og-brand">
+    <div class="og-brand-dot"></div>
+    <span class="og-brand-name">Deep Spark</span>
+  </div>
+
+  <div class="og-title">FRAME<br>GRAPH <span class="og-title-accent">SERIES</span></div>
+
+  <div class="og-subtitle">GPU scheduling, barriers &amp; memory aliasing — from theory to production.</div>
+
+  <div class="og-parts">
+    <div class="og-part p1">
+      <span class="og-part-num">Part I</span>
+      <span class="og-part-title">Theory</span>
+      <span class="og-part-sub">DAG &amp; resource model</span>
+    </div>
+    <div class="og-part p2">
+      <span class="og-part-num">Part II</span>
+      <span class="og-part-title">Build It</span>
+      <span class="og-part-sub">3 C++ iterations</span>
+    </div>
+    <div class="og-part p3">
+      <span class="og-part-num">Part III</span>
+      <span class="og-part-title">Beyond MVP</span>
+      <span class="og-part-sub">Async &amp; split barriers</span>
+    </div>
+    <div class="og-part p4">
+      <span class="og-part-num">Part IV</span>
+      <span class="og-part-title">Production</span>
+      <span class="og-part-sub">UE5 &amp; Frostbite scale</span>
+    </div>
+  </div>
+
+</div><!-- end og-thumb -->
+</div><!-- end og-thumb-wrap -->
