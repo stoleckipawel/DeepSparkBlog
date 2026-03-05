@@ -34,6 +34,8 @@ void FrameGraph::Read(PassIndex passIdx, ResourceHandle h)
 void FrameGraph::Write(PassIndex passIdx, ResourceHandle h)
 {
 	auto& ver = entries[h.index].versions.back();  // current version (pre-bump)
+	if (ver.HasWriter())
+		passes[passIdx].dependsOn.push_back(ver.writerPass);  // WAW edge: prev writer must finish
 	for (PassIndex reader : ver.readerPasses)
 		passes[passIdx].dependsOn.push_back(reader);  // WAR edge: reader must finish first
 	entries[h.index].versions.push_back({});

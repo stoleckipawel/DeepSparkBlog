@@ -565,14 +565,16 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry`, e
 +}
 {{< /code-diff >}}
 
-`Write()` does the opposite: it adds WAR (write-after-read) edges from every reader of the current version (ensuring they all finish before the overwrite), then bumps the version so future reads see the new data:
+`Write()` handles the other direction: it adds a WAW (write-after-write) edge from the current version's writer (if any) and WAR (write-after-read) edges from every reader of the current version (ensuring they all finish before the overwrite), then bumps the version so future reads see the new data:
 
 {{< code-diff title="v1 → v2, Write()" collapsible="true" >}}
 @@ frame_graph_v2.cpp, Write() @@
-+// Write: add WAR edges from current-version readers, then bump the version.
++// Write: add WAW edge from prev writer + WAR edges from readers, then bump the version.
 +void FrameGraph::Write(PassIndex passIdx, ResourceHandle h)
 +{
 +    auto& ver = entries[h.index].versions.back();  // current version (pre-bump)
++    if (ver.HasWriter())
++        passes[passIdx].dependsOn.push_back(ver.writerPass);  // WAW edge: prev writer must finish
 +    for (PassIndex reader : ver.readerPasses)
 +        passes[passIdx].dependsOn.push_back(reader);  // WAR edge: reader must finish first
 +    entries[h.index].versions.push_back({});           // bump version
@@ -603,7 +605,7 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry`, e
 +}
 {{< /code-diff >}}
 
-Every `Write()` adds WAR edges from every reader of the current version (so they finish before the overwrite), then bumps the version. Every `Read()` finds the current version's writer and records a RAW edge. Together they capture both read-after-write and write-after-read hazards, and those edges feed the next three steps.
+Every `Write()` adds a WAW edge from the previous writer (if any) plus WAR edges from every reader of the current version (so they finish before the overwrite), then bumps the version. Every `Read()` finds the current version's writer and records a RAW edge. Together they capture all three data hazards — read-after-write, write-after-read, and write-after-write — and those edges feed the next three steps.
 
 ---
 
