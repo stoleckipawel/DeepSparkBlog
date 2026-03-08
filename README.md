@@ -1,6 +1,6 @@
 ﻿# Deep Spark
 
-Deep Spark is a graphics engineering blog by [Pawel Stolecki](https://stoleckipawel.dev/about/), a rendering engineer focused on real-time graphics and performance-critical systems.
+Deep Spark is a graphics engineering blog by [Pawel Stolecki](https://stoleckipawel.dev/about/).
 
 The articles are about scalable rendering systems, GPU architecture, and low-level graphics programming under real frame-budget constraints.
 
