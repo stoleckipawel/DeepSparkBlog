@@ -280,8 +280,14 @@ main { flex-grow: 0 !important; }
 /* ── Talks grid ─────────────────────────────────────────────── */
 .talks-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1em;
+}
+@media (max-width: 1100px) {
+  .talks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .talks-grid { grid-template-columns: 1fr; }
 }
 .talk-card {
   display: block;
@@ -534,7 +540,7 @@ main { flex-grow: 0 !important; }
       <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
     </div>
     <div class="talk-body">
-      <h4>Physically Based Rendering: Putting Pieces Together</h4>
+      <h4>Physically Based Rendering: Putting Pieces Together (ENG)</h4>
       <div class="meta">Game Industry Conference · CD Projekt Red</div>
     </div>
   </a>
@@ -545,8 +551,19 @@ main { flex-grow: 0 !important; }
       <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
     </div>
     <div class="talk-body">
-      <h4>Illuminating the Villedor: Lighting in Dying Light 2</h4>
+      <h4>Illuminating the Villedor: Lighting in Dying Light 2 (ENG)</h4>
       <div class="meta">Game Industry Conference · w/ Wojciech Zeler · Techland</div>
+    </div>
+  </a>
+
+  <a class="talk-card" href="https://www.youtube.com/watch?v=8tEdoAzL0c8" target="_blank" rel="noopener">
+    <div class="talk-thumb">
+      <img src="https://i.ytimg.com/vi/8tEdoAzL0c8/hqdefault.jpg" alt="Engine programming in Unreal production" loading="lazy" decoding="async" />
+      <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+    </div>
+    <div class="talk-body">
+      <h4>Engine Programming in Unreal Production (PL)</h4>
+      <div class="meta">HGDC 2025 · w/ Ilya Semikolennykh and Adrianna Bielak</div>
     </div>
   </a>
 
@@ -556,8 +573,8 @@ main { flex-grow: 0 !important; }
       <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
     </div>
     <div class="talk-body">
-      <h4>Pakiet Technicznej wiedzy dla 3D Artysty</h4>
-      <div class="meta">Personal channel</div>
+      <h4>Technical Knowledge for 3D Artists (PL)</h4>
+      <div class="meta">3D Community Cracow</div>
     </div>
   </a>
 
