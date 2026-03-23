@@ -1,0 +1,206 @@
+{{/* Interactive Dispatch Sequence Challenge — reader has to build a legal setup order */}}
+<div class="interactive-widget" id="dispatch-ready-widget">
+  <div class="widget-header">
+    <span class="widget-title">Get The Clear Pass To Dispatch</span>
+    <p class="widget-hint">Treat this like a tiny Unreal-style compute clear pass that is trying to survive the trip down into D3D12. Pick the next legal step, not just a plausible one.</p>
+  </div>
+  <div class="widget-body">
+    <div class="drw-example-bar">
+      <button class="widget-pill drw-ex-btn drw-ex-active" data-ex="0">First Clear Pass</button>
+      <button class="widget-pill drw-ex-btn" data-ex="1">Clear Then Sample</button>
+      <button class="widget-pill drw-ex-btn" data-ex="2">Clear Inside A Busy Frame</button>
+    </div>
+
+    <div class="drw-status" id="drw-status"></div>
+    <div class="drw-progress" id="drw-progress"></div>
+    <div class="drw-choices" id="drw-choices"></div>
+    <div class="drw-explain" id="drw-explain"></div>
+
+    <div class="widget-btn-row" style="margin-top:.7em;">
+      <button class="widget-btn" id="drw-reset">Reset Scenario</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.drw-example-bar{display:flex;gap:.45em;flex-wrap:wrap;margin-bottom:.7em}
+.drw-ex-active{color:inherit;border-color:var(--color-neutral-400,#a3a3a3);font-weight:700;background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .drw-ex-active{color:inherit;border-color:var(--color-neutral-500,#737373);background:rgba(255,255,255,.06)}
+.drw-status,.drw-explain{padding:.8em .9em;border-radius:.65rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .drw-status,:is(.dark,.scheme-congo) .drw-explain{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+.drw-status{margin-bottom:.8em}
+.drw-status.good{border-color:var(--color-neutral-300,#d4d4d4);background:var(--color-neutral-50,#fafafa)}
+.drw-status.warn{border-color:var(--color-neutral-300,#d4d4d4);background:var(--color-neutral-50,#fafafa)}
+.drw-status strong{color:inherit}
+.drw-progress{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.55em;margin-bottom:.8em}
+.drw-slot{border-radius:.7rem;border:1px dashed var(--color-neutral-300,#d4d4d4);padding:.75em .8em;background:transparent;min-height:84px}
+:is(.dark,.scheme-congo) .drw-slot{border-color:var(--color-neutral-700)}
+.drw-slot.done{border-style:solid;border-color:var(--color-neutral-300,#d4d4d4);background:var(--color-neutral-50,#fafafa)}
+.dark .drw-slot.done,.scheme-congo .drw-slot.done{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+.drw-slot-label{font-size:.72em;text-transform:uppercase;letter-spacing:.05em;font-family:ui-monospace,monospace;opacity:.65;margin-bottom:.35em}
+.drw-slot-title{font-weight:800;font-size:.88em;line-height:1.35}
+.drw-slot-api{font-family:ui-monospace,monospace;font-size:.73em;opacity:.72;margin-top:.15em}
+.drw-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.7em}
+.drw-choice{border-radius:.7rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-50,#fafafa);padding:.8em .85em;cursor:pointer;transition:transform .15s,border-color .15s,background .15s;min-height:126px}
+.drw-choice:hover{transform:translateY(-1px);border-color:var(--color-neutral-300,#d4d4d4)}
+:is(.dark,.scheme-congo) .drw-choice{background:rgba(255,255,255,.03);border-color:var(--color-neutral-700)}
+.drw-choice.done{opacity:.45;pointer-events:none}
+.drw-choice.good{border-color:var(--color-neutral-400,#a3a3a3);background:var(--color-neutral-100,#f5f5f5)}
+.drw-choice.bad{border-color:var(--color-neutral-300,#d4d4d4);background:rgba(0,0,0,.025)}
+.dark .drw-choice.bad,.scheme-congo .drw-choice.bad{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+.drw-choice-title{font-size:.9em;font-weight:760;line-height:1.35}
+.drw-choice-api{font-family:ui-monospace,monospace;font-size:.74em;opacity:.7;line-height:1.45;margin:.2em 0 .35em}
+.drw-choice-copy{font-size:.78em;line-height:1.55;opacity:.8;max-width:none}
+.drw-explain{margin-top:.7em;font-size:.82em;line-height:1.6;max-width:none}
+@media (max-width: 640px){
+  .drw-progress,.drw-choices{grid-template-columns:1fr}
+}
+</style>
+
+<script>
+(function(){
+var EXAMPLES=[
+  {
+    name:'First Clear Pass',
+    intro:'You are adding the smallest believable Unreal-style compute clear. The shader is trivial, so the only real problem is the D3D12 setup order underneath it.',
+    steps:[
+      {title:'Create the output texture',api:'CreateCommittedResource',copy:'There is nothing to describe or transition until the actual resource exists.',wrong:'You skipped the resource itself. D3D12 cannot build views or barriers around an object that does not exist yet.'},
+      {title:'Create the UAV and CBV descriptors',api:'CreateUnorderedAccessView + CreateConstantBufferView',copy:'Now the raw objects become shader-visible descriptions.',wrong:'You cannot bind a descriptor table until the views it points at have been created.'},
+      {title:'Allocate shader-visible heap space',api:'CreateDescriptorHeap',copy:'The descriptors need a heap location before the command list can reference them.',wrong:'The descriptor table has nowhere concrete to point yet. The heap is the backing storage for those descriptors.'},
+      {title:'Create the root signature',api:'CreateRootSignature',copy:'The shader contract now says where u0 and b0 come from.',wrong:'The command list cannot bind compute root parameters until the binding contract itself exists.'},
+      {title:'Create the compute PSO',api:'CreateComputePipelineState',copy:'The shader bytecode and root signature are frozen into executable state.',wrong:'The dispatch still has no executable pipeline. D3D12 expects the PSO to exist before recording can select it.'},
+      {title:'Record transitions, bindings, and Dispatch',api:'ResourceBarrier + SetComputeRoot* + Dispatch',copy:'Only here does the pass become a real GPU command stream.',wrong:'You are trying to dispatch before the resource, views, heap, root signature, and PSO have all been established.'}
+    ]
+  },
+  {
+    name:'Clear Then Sample',
+    intro:'Now the clear output has to survive the frame because a later pass will sample it. The path is still small, but the pass is no longer isolated.',
+    steps:[
+      {title:'Create the clear target texture',api:'CreateCommittedResource',copy:'The later sampling path still starts with one real texture resource.',wrong:'The later pass cannot sample something that never got allocated in the first place.'},
+      {title:'Create the UAV for the clear and the later SRV',api:'CreateUnorderedAccessView + CreateShaderResourceView',copy:'Now the same texture has both a write view for this pass and a read view for the next one.',wrong:'If the texture has to survive into the next pass, both uses have to be described explicitly.'},
+      {title:'Add the CBV and place all descriptors in a heap',api:'CreateConstantBufferView + CreateDescriptorHeap',copy:'The clear parameters and the texture views now have concrete descriptor storage.',wrong:'The binding model still has nowhere stable to point.'},
+      {title:'Create the clear pass root signature',api:'CreateRootSignature',copy:'The shader contract becomes concrete at the binding level.',wrong:'The dispatch path still has no declared binding contract.'},
+      {title:'Create the compute PSO',api:'CreateComputePipelineState',copy:'Now the pass has immutable executable state instead of just a shader blob.',wrong:'The GPU still has no compute pipeline to run.'},
+      {title:'Record clear, transition, and hand-off to the next pass',api:'ResourceBarrier + SetComputeRoot* + Dispatch',copy:'The pass finally becomes real command-list work and leaves the texture in a usable state for the next step.',wrong:'You are reaching for Dispatch before the pipeline and binding state exist.'}
+    ]
+  },
+  {
+    name:'Clear Inside A Busy Frame',
+    intro:'This is the same tiny clear, but now it lives inside a frame with allocator reuse, descriptor lifetime, and later consumers. The low-level chain is the same, but the consequences of missing a step are bigger.',
+    steps:[
+      {title:'Create the frame-owned clear target',api:'CreateCommittedResource',copy:'Even in a busy frame, the clear still begins with one concrete resource the frame owns.',wrong:'The pass cannot survive the frame if its output resource was never made real.'},
+      {title:'Create the frame-visible UAV and CBV descriptors',api:'CreateUnorderedAccessView + CreateConstantBufferView',copy:'The pass now has the descriptors the command list will actually bind.',wrong:'The engine-friendly idea of a pass output still has to become real D3D12 views.'},
+      {title:'Reserve descriptor heap space that survives execution',api:'CreateDescriptorHeap / allocator-managed heap region',copy:'Now the pass has descriptor storage that is safe for submitted GPU work to reference.',wrong:'A descriptor that gets overwritten too early is still a broken pass even if the shader and PSO are correct.'},
+      {title:'Create the root signature',api:'CreateRootSignature',copy:'The binding contract still has to exist before the frame can record the pass.',wrong:'The compute binding interface is still undefined.'},
+      {title:'Create the compute PSO',api:'CreateComputePipelineState',copy:'The pass now has immutable executable state.',wrong:'You still need immutable pipeline state before recording a valid dispatch.'},
+      {title:'Record, submit, and leave the texture in the right state',api:'Dispatch + ExecuteCommandLists + transitions',copy:'This is the full moment where the tiny clear actually survives contact with the rest of the frame.',wrong:'The pass only survives the frame if recording, submission, and hand-off all line up.'}
+    ]
+  }
+];
+
+var current=0;
+var solved=[];
+var choiceState=[];
+var lastMessage='';
+
+function shuffle(items){
+  var out=items.slice();
+  for(var i=out.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=out[i]; out[i]=out[j]; out[j]=tmp;
+  }
+  return out;
+}
+
+function resetScenario(){
+  var count=EXAMPLES[current].steps.length;
+  solved=[];
+  choiceState=new Array(count).fill('idle');
+  for(var i=0;i<count;i++) solved.push(false);
+  var order=[];
+  for(var j=0;j<count;j++) order.push(j);
+  EXAMPLES[current].order=shuffle(order);
+  lastMessage=EXAMPLES[current].intro;
+  render();
+}
+
+function nextIndex(){
+  for(var i=0;i<solved.length;i++) if(!solved[i]) return i;
+  return solved.length;
+}
+
+function pick(choiceIdx){
+  var expected=nextIndex();
+  if(choiceIdx===expected){
+    solved[choiceIdx]=true;
+    choiceState[choiceIdx]='good';
+    lastMessage='<strong>Correct:</strong> '+EXAMPLES[current].steps[choiceIdx].copy;
+  }else{
+    choiceState[choiceIdx]='bad';
+    lastMessage='<strong>Too early:</strong> '+EXAMPLES[current].steps[choiceIdx].wrong;
+  }
+  render();
+}
+
+function render(){
+  var ex=EXAMPLES[current];
+  var expected=nextIndex();
+  var doneCount=solved.filter(function(v){ return v; }).length;
+  document.querySelectorAll('#dispatch-ready-widget .drw-ex-btn').forEach(function(btn){
+    btn.classList.toggle('drw-ex-active', parseInt(btn.dataset.ex,10)===current);
+  });
+
+  var status=document.getElementById('drw-status');
+  status.className='drw-status '+(doneCount===ex.steps.length?'good':'warn');
+  status.innerHTML=''+
+    '<strong>'+ex.name+'</strong><br>'+
+    (doneCount===ex.steps.length
+      ? 'You built a legal setup chain. That is the point: the tiny clear only survives the frame once every dependency in front of <code>Dispatch</code> exists.'
+      : 'Step <strong>'+(expected+1)+'</strong> of <strong>'+ex.steps.length+'</strong>. Choose the next action that can legally happen now.');
+
+  var progress=document.getElementById('drw-progress');
+  progress.innerHTML='';
+  ex.steps.forEach(function(step,i){
+    var slot=document.createElement('div');
+    slot.className='drw-slot '+(solved[i]?'done':'');
+    slot.innerHTML=''+
+      '<div class="drw-slot-label">'+(solved[i]?'Locked In':'Pending')+'</div>'+
+      '<div class="drw-slot-title">'+(solved[i]?(i+1)+'. '+step.title:'Step '+(i+1))+'</div>'+
+      (solved[i]?'<div class="drw-slot-api">'+step.api+'</div>':'');
+    progress.appendChild(slot);
+  });
+
+  var choices=document.getElementById('drw-choices');
+  choices.innerHTML='';
+  ex.order.forEach(function(i){
+    var step=ex.steps[i];
+    var card=document.createElement('div');
+    card.className='drw-choice '+(solved[i]?'done':choiceState[i]);
+    card.innerHTML=''+
+      '<div class="drw-choice-title">'+step.title+'</div>'+
+      '<div class="drw-choice-api">'+step.api+'</div>'+
+      '<div class="drw-choice-copy">'+step.copy+'</div>';
+    if(!solved[i]){
+      card.addEventListener('click',function(){ pick(i); });
+    }
+    choices.appendChild(card);
+  });
+
+  document.getElementById('drw-explain').innerHTML=lastMessage;
+  if(doneCount===ex.steps.length){
+    document.getElementById('drw-explain').innerHTML+='<br><br><strong>Why this matters:</strong> this is the real lesson of the article. A tiny Unreal-style pass still has to survive the exact same D3D12 chain as a bigger one.';
+  }
+}
+
+  document.querySelectorAll('#dispatch-ready-widget .drw-ex-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ current=parseInt(btn.dataset.ex,10); resetScenario(); });
+  });
+  document.getElementById('drw-reset').addEventListener('click',resetScenario);
+
+  var el=document.getElementById('dispatch-ready-widget');
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){ obs.disconnect(); resetScenario(); }
+  },{rootMargin:'200px'});
+  obs.observe(el);
+})();
+</script>

@@ -1,0 +1,142 @@
+{{/* Interactive Root Binding Puzzle — reader maps root parameters to shader register expectations */}}
+<div class="interactive-widget" id="root-binding-widget">
+  <div class="widget-header">
+    <span class="widget-title">Translate Shader Parameters Into D3D12</span>
+    <p class="widget-hint">Think of this as the lower-level version of an Unreal-style shader parameter setup. Match the friendly pass idea to the root signature contract D3D12 actually needs.</p>
+  </div>
+  <div class="widget-body">
+    <div class="rbw-example-bar">
+      <button class="widget-pill rbw-ex-btn rbw-ex-active" data-ex="0">Clear Pass</button>
+      <button class="widget-pill rbw-ex-btn" data-ex="1">Clear Then Sample</button>
+      <button class="widget-pill rbw-ex-btn" data-ex="2">Clear With Extra Debug Input</button>
+    </div>
+
+    <div class="rbw-contract" id="rbw-contract"></div>
+    <div class="rbw-grid" id="rbw-grid"></div>
+    <div class="widget-btn-row" style="margin-top:.7em;">
+      <button class="widget-btn" id="rbw-check">Validate Mapping</button>
+      <button class="widget-btn" id="rbw-reset">Reset</button>
+    </div>
+    <div class="rbw-result" id="rbw-result"></div>
+  </div>
+</div>
+
+<style>
+.rbw-example-bar{display:flex;gap:.45em;flex-wrap:wrap;margin-bottom:.7em}
+.rbw-ex-active{color:inherit;border-color:var(--color-neutral-400,#a3a3a3);font-weight:700;background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .rbw-ex-active{color:inherit;border-color:var(--color-neutral-500,#737373);background:rgba(255,255,255,.06)}
+.rbw-contract,.rbw-result{padding:.8em .9em;border-radius:.65rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .rbw-contract,:is(.dark,.scheme-congo) .rbw-result{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+.rbw-contract{margin-bottom:.8em;font-size:.85em;line-height:1.6;max-width:none}
+.rbw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.7em}
+.rbw-card{border-radius:.75rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-50,#fafafa);padding:.85em .9em}
+:is(.dark,.scheme-congo) .rbw-card{background:rgba(255,255,255,.03);border-color:var(--color-neutral-700)}
+.rbw-card.good{border-color:var(--color-neutral-400,#a3a3a3);background:var(--color-neutral-100,#f5f5f5)}
+.rbw-card.bad{border-color:var(--color-neutral-300,#d4d4d4);background:rgba(0,0,0,.025)}
+.dark .rbw-card.bad,.scheme-congo .rbw-card.bad{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+.rbw-card-label{font-size:.72em;text-transform:uppercase;letter-spacing:.05em;font-family:ui-monospace,monospace;opacity:.68;margin-bottom:.3em}
+.rbw-card-title{font-size:.92em;font-weight:800;margin-bottom:.45em}
+.rbw-card select{width:100%;padding:.58em .65em;border-radius:.55rem;border:1px solid var(--color-neutral-300,#d4d4d4);background:#fff;color:inherit}
+:is(.dark,.scheme-congo) .rbw-card select{background:var(--color-neutral-950);border-color:var(--color-neutral-700)}
+.rbw-result{margin-top:.7em;font-size:.84em;line-height:1.6;max-width:none}
+.rbw-result.good{border-color:var(--color-neutral-400,#a3a3a3);background:var(--color-neutral-100,#f5f5f5)}
+.rbw-result.bad{border-color:var(--color-neutral-300,#d4d4d4);background:rgba(0,0,0,.025)}
+.dark .rbw-result.bad,.scheme-congo .rbw-result.bad{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+@media (max-width: 640px){
+  .rbw-grid{grid-template-columns:1fr}
+}
+</style>
+
+<script>
+(function(){
+var EXAMPLES=[
+  {
+    name:'Clear Pass',
+    contract:['b0 CBV for clear color','u0 UAV for output texture'],
+    options:['unused','b0 CBV table','u0 UAV table','t0 SRV table','s0 sampler table'],
+    expected:['b0 CBV table','u0 UAV table'],
+    note:'This is the article path in its smallest form: one parameter block, one writable output, one dispatch.'
+  },
+  {
+    name:'Clear Then Sample',
+    contract:['u0 UAV for clear target','b0 CBV for clear color'],
+    options:['unused','b0 CBV table','u0 UAV table','t0 SRV table','s0 sampler table'],
+    expected:['u0 UAV table','b0 CBV table'],
+    note:'The next pass may sample the texture later, but this clear pass still only binds a UAV and a CBV.'
+  },
+  {
+    name:'Clear With Extra Debug Input',
+    contract:['t0 SRV for optional debug mask','u0 UAV for output texture','b0 CBV for clear color'],
+    options:['unused','b0 CBV table','u0 UAV table','t0 SRV table','s0 sampler table'],
+    expected:['t0 SRV table','u0 UAV table','b0 CBV table'],
+    note:'This is the same tiny clear with one extra read input. The point is to show how the root signature grows when the pass grows.'
+  }
+];
+
+var current=0;
+var selections=[];
+
+function reset(){
+  selections=EXAMPLES[current].expected.map(function(){ return 'unused'; });
+  render();
+}
+
+function render(){
+  var ex=EXAMPLES[current];
+  document.querySelectorAll('#root-binding-widget .rbw-ex-btn').forEach(function(btn){
+    btn.classList.toggle('rbw-ex-active', parseInt(btn.dataset.ex,10)===current);
+  });
+  document.getElementById('rbw-contract').innerHTML='<strong>'+ex.name+'</strong><br>Shader contract: '+ex.contract.join('; ')+'.<br><br>'+ex.note;
+  var grid=document.getElementById('rbw-grid');
+  grid.innerHTML='';
+  ex.expected.forEach(function(_,i){
+    var card=document.createElement('div');
+    card.className='rbw-card';
+    var options=ex.options.map(function(opt){
+      return '<option value="'+opt+'"'+(selections[i]===opt?' selected':'')+'>'+opt+'</option>';
+    }).join('');
+    card.innerHTML=''+
+      '<div class="rbw-card-label">Root parameter '+i+'</div>'+
+      '<div class="rbw-card-title">What does this parameter expose?</div>'+
+      '<select data-slot="'+i+'">'+options+'</select>';
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll('select').forEach(function(sel){
+    sel.addEventListener('change',function(){ selections[parseInt(sel.dataset.slot,10)]=sel.value; });
+  });
+  document.getElementById('rbw-result').className='rbw-result';
+}
+
+function check(){
+  var ex=EXAMPLES[current];
+  var cards=document.querySelectorAll('#root-binding-widget .rbw-card');
+  var wrong=[];
+  cards.forEach(function(card,i){
+    var ok=selections[i]===ex.expected[i];
+    card.classList.toggle('good',ok);
+    card.classList.toggle('bad',!ok);
+    if(!ok){ wrong.push('root '+i+' should expose <code>'+ex.expected[i]+'</code>, not <code>'+selections[i]+'</code>'); }
+  });
+  var result=document.getElementById('rbw-result');
+  if(wrong.length===0){
+    result.className='rbw-result good';
+    result.innerHTML='<strong>Valid contract.</strong> This is the translation the article wants you to internalize: the friendly pass setup turns into a root signature contract that tells D3D12 exactly how shader registers get satisfied.';
+  }else{
+    result.className='rbw-result bad';
+    result.innerHTML='<strong>Mismatch.</strong> '+wrong.join('; ')+'. This is exactly the class of mistake that makes a tiny pass disappear even when the shader code itself looks fine.';
+  }
+}
+
+  document.querySelectorAll('#root-binding-widget .rbw-ex-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ current=parseInt(btn.dataset.ex,10); reset(); });
+  });
+  document.getElementById('rbw-check').addEventListener('click',check);
+  document.getElementById('rbw-reset').addEventListener('click',reset);
+
+  var el=document.getElementById('root-binding-widget');
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){ obs.disconnect(); reset(); }
+  },{rootMargin:'200px'});
+  obs.observe(el);
+})();
+</script>

@@ -1,0 +1,163 @@
+{{/* Interactive UAV Barrier Quiz — reader judges the dependency instead of just toggling a switch */}}
+<div class="interactive-widget" id="uav-barrier-widget">
+  <div class="widget-header">
+    <span class="widget-title">Will The Clear Survive This Hand-Off?</span>
+    <p class="widget-hint">Treat each case as what happens after the clear pass. Decide whether the next step needs explicit UAV ordering, then check the answer.</p>
+  </div>
+  <div class="widget-body">
+    <div class="ubw-example-bar">
+      <button class="widget-pill ubw-ex-btn ubw-ex-active" data-ex="0">Clear → Graphics Sample</button>
+      <button class="widget-pill ubw-ex-btn" data-ex="1">Clear → Compute Read</button>
+      <button class="widget-pill ubw-ex-btn" data-ex="2">Clear → Compute Overwrite</button>
+      <button class="widget-pill ubw-ex-btn" data-ex="3">Clear → Unrelated Pass</button>
+    </div>
+
+    <div class="ubw-flow" id="ubw-flow"></div>
+    <div class="ubw-answer-bar" id="ubw-answer-bar"></div>
+    <div class="widget-btn-row" style="margin-top:.7em;">
+      <button class="widget-btn" id="ubw-check">Check Answer</button>
+      <button class="widget-btn" id="ubw-reset">Reset</button>
+    </div>
+    <div class="ubw-result" id="ubw-result"></div>
+    <div class="ubw-notes" id="ubw-notes"></div>
+  </div>
+</div>
+
+<style>
+.ubw-example-bar,.ubw-answer-bar{display:flex;gap:.45em;flex-wrap:wrap;margin-bottom:.7em}
+.ubw-ex-active,.ubw-answer-active{color:inherit;border-color:var(--color-neutral-400,#a3a3a3);font-weight:700;background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .ubw-ex-active,:is(.dark,.scheme-congo) .ubw-answer-active{color:inherit;border-color:var(--color-neutral-500,#737373);background:rgba(255,255,255,.06)}
+.ubw-flow{display:grid;grid-template-columns:minmax(150px,1fr) auto minmax(150px,1fr);gap:.65em;align-items:center;margin:.7em 0 1em}
+.ubw-box{border-radius:.75rem;padding:.85em .9em;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-50,#fafafa);min-height:108px}
+:is(.dark,.scheme-congo) .ubw-box{background:rgba(255,255,255,.03);border-color:var(--color-neutral-700)}
+.ubw-box .ubw-label{font-size:.72em;text-transform:uppercase;letter-spacing:.05em;font-family:ui-monospace,monospace;opacity:.65;margin-bottom:.35em}
+.ubw-box .ubw-title{font-weight:800;font-size:.94em;margin-bottom:.25em}
+.ubw-box .ubw-copy{font-size:.8em;line-height:1.55;opacity:.8;max-width:none}
+.ubw-box.read,.ubw-box.write{border-color:var(--color-neutral-300,#d4d4d4);background:var(--color-neutral-50,#fafafa)}
+.dark .ubw-box.read,.scheme-congo .ubw-box.read,.dark .ubw-box.write,.scheme-congo .ubw-box.write{border-color:var(--color-neutral-700);background:rgba(255,255,255,.03)}
+.ubw-arrow-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35em;min-width:100px}
+.ubw-arrow{font-size:1.35em;opacity:.75}
+.ubw-answer{cursor:pointer}
+.ubw-result{padding:.85em .95em;border-radius:.7rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-100,#f5f5f5);font-size:.87em;line-height:1.6;min-height:64px}
+:is(.dark,.scheme-congo) .ubw-result{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+.ubw-result.required,.ubw-result.good,.ubw-result.optional{border-color:var(--color-neutral-300,#d4d4d4);background:var(--color-neutral-50,#fafafa)}
+.dark .ubw-result.required,.scheme-congo .ubw-result.required,.dark .ubw-result.good,.scheme-congo .ubw-result.good,.dark .ubw-result.optional,.scheme-congo .ubw-result.optional{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+.ubw-notes{margin-top:.7em;padding:.75em .85em;border-radius:.6rem;background:var(--color-neutral-100,#f5f5f5);border:1px solid var(--color-neutral-200,#e5e5e5);font-size:.82em;line-height:1.6;max-width:none}
+.dark .ubw-notes,.scheme-congo .ubw-notes{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+@media (max-width: 720px){
+  .ubw-flow{grid-template-columns:1fr}
+  .ubw-arrow-wrap{flex-direction:row}
+}
+</style>
+
+<script>
+(function(){
+var EXAMPLES=[
+  {
+    name:'Clear → Graphics Sample',
+    a:{kind:'write',title:'Compute clear writes the texture',copy:'The clear pass writes the output through a UAV.'},
+    b:{kind:'read',title:'A later graphics pass samples it',copy:'The next pass reads the texture through a shader-readable view.'},
+    answer:'not-needed',
+    klass:'good',
+    copy:'A UAV barrier is not the key dependency here. The important hand-off is the state transition from UAV usage to shader-readable usage for the later pass.'
+  },
+  {
+    name:'Clear → Compute Read',
+    a:{kind:'write',title:'Compute clear writes the texture',copy:'The first compute pass produces the texture contents.'},
+    b:{kind:'read',title:'A later compute pass reads that result',copy:'The second compute pass depends on what the clear wrote.'},
+    answer:'required',
+    klass:'required',
+    copy:'Required when the later compute read depends on the earlier UAV write. This is the classic producer-consumer edge that UAV ordering exists to make explicit.'
+  },
+  {
+    name:'Clear → Compute Overwrite',
+    a:{kind:'write',title:'Compute clear writes the texture',copy:'The clear pass writes the resource first.'},
+    b:{kind:'write',title:'A later compute pass overwrites it',copy:'The second compute pass also writes the same texture.'},
+    answer:'depends',
+    klass:'optional',
+    copy:'It depends. If the later pass truly does not care about ordering relative to the clear, a UAV barrier can be skipped. If the frame does care, add it.'
+  },
+  {
+    name:'Clear → Unrelated Pass',
+    a:{kind:'write',title:'Compute clear writes texture A',copy:'The clear pass touches one texture.'},
+    b:{kind:'read',title:'The next pass reads texture B',copy:'The later pass touches a different resource entirely.'},
+    answer:'not-needed',
+    klass:'good',
+    copy:'No same-resource UAV ordering hazard exists here. If synchronization is needed, it comes from some other dependency, not this rule.'
+  }
+];
+var ANSWERS=[
+  {id:'required',label:'Barrier Required'},
+  {id:'not-needed',label:'No Barrier Needed'},
+  {id:'depends',label:'Depends On Intent'}
+];
+
+var current=0;
+var selected='';
+
+function render(){
+  var ex=EXAMPLES[current];
+  document.querySelectorAll('#uav-barrier-widget .ubw-ex-btn').forEach(function(btn){
+    btn.classList.toggle('ubw-ex-active', parseInt(btn.dataset.ex,10)===current);
+  });
+  document.getElementById('ubw-flow').innerHTML=''+
+    '<div class="ubw-box '+ex.a.kind+'">'+
+      '<div class="ubw-label">Dispatch A</div>'+
+      '<div class="ubw-title">'+ex.a.title+'</div>'+
+      '<div class="ubw-copy">'+ex.a.copy+'</div>'+
+    '</div>'+
+    '<div class="ubw-arrow-wrap"><div class="ubw-arrow">→</div><div class="widget-pill">same resource?</div></div>'+
+    '<div class="ubw-box '+ex.b.kind+'">'+
+      '<div class="ubw-label">Dispatch B</div>'+
+      '<div class="ubw-title">'+ex.b.title+'</div>'+
+      '<div class="ubw-copy">'+ex.b.copy+'</div>'+
+    '</div>';
+
+  var answerBar=document.getElementById('ubw-answer-bar');
+  answerBar.innerHTML='';
+  ANSWERS.forEach(function(answer){
+    var btn=document.createElement('button');
+    btn.className='widget-btn ubw-answer '+(selected===answer.id?'ubw-answer-active':'');
+    btn.textContent=answer.label;
+    btn.addEventListener('click',function(){ selected=answer.id; render(); });
+    answerBar.appendChild(btn);
+  });
+
+  document.getElementById('ubw-result').className='ubw-result';
+  document.getElementById('ubw-result').innerHTML='Choose a classification, then check it.';
+  document.getElementById('ubw-notes').innerHTML='<strong>Rule of thumb:</strong> a transition barrier changes declared usage; a UAV barrier orders UAV accesses to the same resource. For this article, that means the clear only "survives" if the next pass gets the right hand-off, not just if the shader happened to run.';
+}
+
+function check(){
+  var ex=EXAMPLES[current];
+  var result=document.getElementById('ubw-result');
+  if(!selected){
+    result.className='ubw-result optional';
+    result.innerHTML='Pick an answer first. The goal is to force the decision before revealing the explanation.';
+    return;
+  }
+  var correct=selected===ex.answer;
+  result.className='ubw-result '+ex.klass;
+  result.innerHTML=''+
+    '<strong>'+(correct?'Correct. ':'Not quite. ')+'</strong>'+
+    ex.copy;
+}
+
+function reset(){
+  selected='';
+  render();
+}
+
+  document.querySelectorAll('#uav-barrier-widget .ubw-ex-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ current=parseInt(btn.dataset.ex,10); reset(); });
+  });
+  document.getElementById('ubw-check').addEventListener('click',check);
+  document.getElementById('ubw-reset').addEventListener('click',reset);
+
+  var el=document.getElementById('uav-barrier-widget');
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){ obs.disconnect(); reset(); }
+  },{rootMargin:'200px'});
+  obs.observe(el);
+})();
+</script>

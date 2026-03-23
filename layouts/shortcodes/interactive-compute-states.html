@@ -1,0 +1,151 @@
+{{/* Interactive Compute State Planner — reader chooses the resource states before and after dispatch */}}
+<div class="interactive-widget" id="compute-states-widget">
+  <div class="widget-header">
+    <span class="widget-title">Make The Clear Survive The Next Pass</span>
+    <p class="widget-hint">Pick the states before and after the clear dispatch. The goal is not memorization. The goal is to decide what the next pass needs and leave the texture in a survivable state.</p>
+  </div>
+  <div class="widget-body">
+    <div class="csw-example-bar">
+      <button class="widget-pill csw-ex-btn csw-ex-active" data-ex="0">Clear Then Sample</button>
+      <button class="widget-pill csw-ex-btn" data-ex="1">Clear Then Second Compute Pass</button>
+      <button class="widget-pill csw-ex-btn" data-ex="2">Clear Then Copy</button>
+    </div>
+
+    <div class="csw-intro" id="csw-intro"></div>
+    <div class="csw-grid" id="csw-grid"></div>
+    <div class="widget-btn-row" style="margin-top:.7em;">
+      <button class="widget-btn" id="csw-check">Check States</button>
+      <button class="widget-btn" id="csw-reset">Reset</button>
+    </div>
+    <div class="csw-result" id="csw-result"></div>
+  </div>
+</div>
+
+<style>
+.csw-example-bar{display:flex;gap:.45em;flex-wrap:wrap;margin-bottom:.7em}
+.csw-ex-active{color:inherit;border-color:var(--color-neutral-400,#a3a3a3);font-weight:700;background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .csw-ex-active{color:inherit;border-color:var(--color-neutral-500,#737373);background:rgba(255,255,255,.06)}
+.csw-intro,.csw-result{padding:.8em .9em;border-radius:.65rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .csw-intro,:is(.dark,.scheme-congo) .csw-result{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+.csw-intro{margin-bottom:.8em;font-size:.85em;line-height:1.6;max-width:none}
+.csw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:.7em}
+.csw-card{border-radius:.75rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:var(--color-neutral-50,#fafafa);padding:.85em .9em}
+:is(.dark,.scheme-congo) .csw-card{background:rgba(255,255,255,.03);border-color:var(--color-neutral-700)}
+.csw-card.good{border-color:var(--color-neutral-400,#a3a3a3);background:var(--color-neutral-100,#f5f5f5)}
+.csw-card.bad{border-color:var(--color-neutral-300,#d4d4d4);background:rgba(0,0,0,.025)}
+.dark .csw-card.bad,.scheme-congo .csw-card.bad{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+.csw-card-title{font-size:.92em;font-weight:800;margin-bottom:.55em}
+.csw-row{display:grid;grid-template-columns:1fr 1fr;gap:.55em}
+.csw-label{font-size:.72em;text-transform:uppercase;letter-spacing:.05em;font-family:ui-monospace,monospace;opacity:.68;margin-bottom:.28em}
+.csw-card select{width:100%;padding:.58em .65em;border-radius:.55rem;border:1px solid var(--color-neutral-300,#d4d4d4);background:#fff;color:inherit}
+:is(.dark,.scheme-congo) .csw-card select{background:var(--color-neutral-950);border-color:var(--color-neutral-700)}
+.csw-result{margin-top:.7em;font-size:.84em;line-height:1.6;max-width:none}
+.csw-result.good{border-color:var(--color-neutral-400,#a3a3a3);background:var(--color-neutral-100,#f5f5f5)}
+.csw-result.bad{border-color:var(--color-neutral-300,#d4d4d4);background:rgba(0,0,0,.025)}
+.dark .csw-result.bad,.scheme-congo .csw-result.bad{border-color:var(--color-neutral-600);background:rgba(255,255,255,.04)}
+@media (max-width: 640px){
+  .csw-grid{grid-template-columns:1fr}
+}
+</style>
+
+<script>
+(function(){
+var STATES=['COMMON','NON_PIXEL_SHADER_RESOURCE','UNORDERED_ACCESS','COPY_SOURCE','COPY_DEST'];
+var EXAMPLES=[
+  {
+    name:'Clear Then Sample',
+    intro:'An Unreal-style clear pass writes a texture, and a later pass samples that result. What state lets the clear run, and what state lets the next pass survive?',
+    rows:[
+      {name:'Output texture',before:'UNORDERED_ACCESS',after:'NON_PIXEL_SHADER_RESOURCE'}
+    ]
+  },
+  {
+    name:'Clear Then Second Compute Pass',
+    intro:'The first compute pass clears the texture. A second compute pass will read it as a shader resource right afterward.',
+    rows:[
+      {name:'Output texture',before:'UNORDERED_ACCESS',after:'NON_PIXEL_SHADER_RESOURCE'}
+    ]
+  },
+  {
+    name:'Clear Then Copy',
+    intro:'The clear pass produces a texture that a later copy path wants to use. The pass still has to leave the texture in a usable state for what comes next.',
+    rows:[
+      {name:'Output texture',before:'UNORDERED_ACCESS',after:'NON_PIXEL_SHADER_RESOURCE'}
+    ]
+  }
+];
+
+var current=0;
+var picks=[];
+
+function reset(){
+  picks=EXAMPLES[current].rows.map(function(){ return {before:'COMMON',after:'COMMON'}; });
+  render();
+}
+
+function render(){
+  var ex=EXAMPLES[current];
+  document.querySelectorAll('#compute-states-widget .csw-ex-btn').forEach(function(btn){
+    btn.classList.toggle('csw-ex-active', parseInt(btn.dataset.ex,10)===current);
+  });
+  document.getElementById('csw-intro').innerHTML='<strong>'+ex.name+'</strong><br>'+ex.intro;
+  var grid=document.getElementById('csw-grid');
+  grid.innerHTML='';
+  ex.rows.forEach(function(row,i){
+    var card=document.createElement('div');
+    card.className='csw-card';
+    var before=STATES.map(function(state){ return '<option value="'+state+'"'+(picks[i].before===state?' selected':'')+'>'+state+'</option>'; }).join('');
+    var after=STATES.map(function(state){ return '<option value="'+state+'"'+(picks[i].after===state?' selected':'')+'>'+state+'</option>'; }).join('');
+    card.innerHTML=''+
+      '<div class="csw-card-title">'+row.name+'</div>'+
+      '<div class="csw-row">'+
+        '<div><div class="csw-label">Before dispatch</div><select data-kind="before" data-row="'+i+'">'+before+'</select></div>'+
+        '<div><div class="csw-label">After dispatch</div><select data-kind="after" data-row="'+i+'">'+after+'</select></div>'+
+      '</div>';
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll('select').forEach(function(sel){
+    sel.addEventListener('change',function(){
+      var row=parseInt(sel.dataset.row,10);
+      picks[row][sel.dataset.kind]=sel.value;
+    });
+  });
+  document.getElementById('csw-result').className='csw-result';
+}
+
+function check(){
+  var ex=EXAMPLES[current];
+  var cards=document.querySelectorAll('#compute-states-widget .csw-card');
+  var errors=[];
+  cards.forEach(function(card,i){
+    var row=ex.rows[i];
+    var ok=picks[i].before===row.before && picks[i].after===row.after;
+    card.classList.toggle('good',ok);
+    card.classList.toggle('bad',!ok);
+    if(!ok){
+      errors.push(row.name+' should be <code>'+row.before+'</code> before dispatch and <code>'+row.after+'</code> after dispatch');
+    }
+  });
+  var result=document.getElementById('csw-result');
+  if(errors.length===0){
+    result.className='csw-result good';
+    result.innerHTML='<strong>State plan works.</strong> This is the mental move the article is trying to teach: decide what the next pass needs, then leave the resource in the explicit D3D12 state that makes that hand-off real.';
+  }else{
+    result.className='csw-result bad';
+    result.innerHTML='<strong>State mismatch.</strong> '+errors.join('; ')+'. The point is not to memorize names. It is to derive the state from what this clear pass does now and what the frame needs from it next.';
+  }
+}
+
+  document.querySelectorAll('#compute-states-widget .csw-ex-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ current=parseInt(btn.dataset.ex,10); reset(); });
+  });
+  document.getElementById('csw-check').addEventListener('click',check);
+  document.getElementById('csw-reset').addEventListener('click',reset);
+
+  var el=document.getElementById('compute-states-widget');
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){ obs.disconnect(); reset(); }
+  },{rootMargin:'200px'});
+  obs.observe(el);
+})();
+</script>
