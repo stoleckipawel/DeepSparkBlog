@@ -32,6 +32,19 @@ Rebuild and refit optimize different costs. Rebuild gives the builder freedom to
 
 {{< rt-as-update-modes >}}
 
+## Related Work And API Context
+
+The API surface differs by backend, but the useful comparison is small: what data names the top-level structure, what data names changed instances, and what data lets the update be submitted without rewriting the whole scene.
+
+| Article term | Vulkan-side model | D3D12-side model | Role in the article |
+|---|---|---|---|
+| Classic TLAS | top-level acceleration structure | top-level RTAS / TLAS | Baseline scene-instance structure |
+| PTLAS | partitioned acceleration structure | partitioned top-level RTAS / PTLAS | Top-level state split into maintained partitions |
+| Partition | partition in the top-level structure | partition in the top-level structure | Spatial or policy-owned maintenance unit |
+| Global partition | global partition | global partition | Dynamic bucket for instances that should not rewrite many local partitions |
+| Instance operation | write/update instance operation | write/update instance operation | Sparse description of changed instance records |
+| Indirect update data | device-authored operation arguments | GPU-authored operation arguments | Lets simulation or compute generate update work on the GPU |
+
 ## The Problem We Want To Solve
 
 Scene changes are often local, but classic TLAS maintenance is still organized around one scene-level top-level structure.
@@ -129,22 +142,6 @@ Each changed domino atomically reserves one slot in the PTLAS write-instance ope
 
 That is the behavior to compare against a classic TLAS path: classic TLAS can rebuild or refit correctly, but the build call still reads the top-level instance input as one broad structure.
 The PTLAS path can submit a device-authored operation list whose size follows the changed set.
-
-## The Vendor Model Converges More Than It Diverges
-
-The APIs differ, but the behavioral target is consistent: represent top-level change as partition-aware work.
-
-The common model is partitions, explicit instance operations, optional global dynamic handling, and indirect update data that can be generated without turning every frame into a full scene rewrite.
-
-The behavioral test stays the same across APIs: local scene change should be expressible as local top-level work.
-
-| Concept | Vulkan / extension model | D3D12 / RTAS model | Implementation checkpoint |
-|---|---|---|---|
-| Partitioned top-level structure | partitioned acceleration structure | Partitioned TLAS / PTLAS | `PartitionedTlas` top-level provider |
-| Write instance op | `WRITE_INSTANCE` | partitioned TLAS write instance | Native operation header `WriteInstance` |
-| Update instance op | `UPDATE_INSTANCE` | partitioned TLAS update instance | Planned/native op concept |
-| Global partition | global partition concept | global partition concept | `GlobalPartition` planner/update state |
-| Logical dirty state | app-defined changed instances | indirect operation arguments | Changed-instance update stream |
 
 ## A Concrete Implementation Lens
 
