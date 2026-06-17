@@ -10,12 +10,13 @@
   <div class="ptlas-structure-grid">
     <div class="ptlas-structure-rules">
       <p class="ptlas-structure-lead">
-        PTLAS keeps the scene-level role of TLAS, but the top level is maintained through partitions.
+        Same top-level traversal role, different maintenance units.
       </p>
       <ul>
         <li>BLAS objects can be reused across updates.</li>
-        <li>Instance indices and partitions are separate update targets.</li>
-        <li>Indirect operations describe which records change.</li>
+        <li>Changed instance records can be written separately.</li>
+        <li>Touched partitions can be maintained separately.</li>
+        <li>The global partition collects highly dynamic instances.</li>
       </ul>
     </div>
 
@@ -126,7 +127,7 @@
           <rect x="516" y="160" width="174" height="22" rx="11" class="ptlas-note-chip" />
           <rect x="510" y="266" width="182" height="22" rx="11" class="ptlas-note-chip" />
           <text x="612" y="94" class="ptlas-note" text-anchor="middle">reuse BLAS</text>
-          <text x="603" y="176" class="ptlas-note" text-anchor="middle">rewrite changed indices</text>
+          <text x="603" y="176" class="ptlas-note" text-anchor="middle">write changed instances</text>
           <text x="601" y="282" class="ptlas-note" text-anchor="middle">rewrite touched partitions</text>
         </g>
       </svg>

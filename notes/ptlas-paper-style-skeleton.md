@@ -897,6 +897,9 @@ Run these checks after each implementation pass:
 - no obvious visual narration
 - no raw implementation file enumeration
 - no brand-led explanation in the main teaching flow
+- no vague statements that sound correct but do not teach a concrete concept
+- no generic questions unless the article immediately answers them with a technical distinction
+- every introduced concept has enough context for a rendering engineer who has not worked directly with PTLAS
 - every section has one purpose
 - every visual answers one section-specific question
 
@@ -908,8 +911,8 @@ After each pass:
 & "$env:USERPROFILE\tools\hugo\hugo.exe" -D --gc --minify
 ```
 
-Then scan the edited article for banned terms and AI-style filler:
+Then scan the edited article for banned terms, AI-style filler, and vague placeholder phrasing:
 
 ```powershell
-rg -n "\b(handoff|real|really|actual|actually|hard part|just|signal|unlock|leverage|delve|robust|pivotal|seamless|tapestry|landscape|testament|underscore|furthermore|moreover|in conclusion|not just|not only|the key is)\b" content/posts/ptlas-engine-transition/index.md
+rg -n "\b(handoff|real|really|actual|actually|hard part|just|signal|unlock|leverage|delve|robust|pivotal|seamless|tapestry|landscape|testament|underscore|furthermore|moreover|in conclusion|not just|not only|the key is|important|interesting|useful question|thing|stuff|properly|clearly)\b" content/posts/ptlas-engine-transition/index.md
 ```

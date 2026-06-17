@@ -5,7 +5,7 @@
       <div class="ptlas-policy-kicker">Partition policy dilemma</div>
       <h3>Where should a moving instance live?</h3>
     </div>
-    <p>The domino sample exposes the first real PTLAS policy choice: preserve spatially clean partitions, or move dynamic objects into a cheaper update bucket.</p>
+    <p>Three policies change the balance between update cost and spatial grouping.</p>
   </div>
 
   <div class="ptlas-policy-grid">
@@ -41,11 +41,7 @@
   </div>
 
   <p class="ptlas-policy-line">
-    Local partition update = slower updates, cleaner tracing. Global partition = faster updates, less spatial coherence. Hybrid chooses where that tradeoff changes.
-  </p>
-
-  <p class="ptlas-policy-note">
-    Aggressive global mode can move every domino from a touched partition into global. That reduces local partition rewrites, but the global partition can grow beyond the truly moving set.
+    None of the policies is free; each moves cost between update work, spatial grouping, and tuning.
   </p>
 </section>
 
