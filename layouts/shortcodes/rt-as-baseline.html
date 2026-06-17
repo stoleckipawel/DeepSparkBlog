@@ -5,7 +5,7 @@
       <div class="rt-baseline-kicker">Classic ray tracing baseline</div>
       <h3>BLAS stores geometry. TLAS stores instances.</h3>
     </div>
-    <p>The first mental model is ownership, not update policy yet.</p>
+    <p>Ownership comes before update policy.</p>
   </div>
 
   <div class="rt-baseline-flow" aria-hidden="true">
@@ -47,7 +47,7 @@
     </svg>
   </div>
 
-  <p class="rt-baseline-takeaway">This is the classic two-level structure: geometry below, instance placement above.</p>
+  <p class="rt-baseline-takeaway">The top level accelerates instance traversal; the bottom level accelerates geometry traversal.</p>
 </section>
 
 <style>

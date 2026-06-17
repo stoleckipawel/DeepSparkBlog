@@ -7,27 +7,28 @@ authors: ["Pawel Stolecki"]
 description: "A peer-level PTLAS article about what changes when an engine moves from classic TLAS maintenance to partitioned top-level updates."
 tags: ["rendering", "ray-tracing", "ptlas", "vulkan", "d3d12", "engine-architecture"]
 categories: ["analysis"]
-summary: "PTLAS is a different top-level update model, and its value appears when localized scene change becomes localized native top-level work."
+summary: "A compact comparison of classic TLAS rebuild/refit and PTLAS partitioned updates, focused on when localized scene changes can reduce top-level maintenance work."
 showTableOfContents: false
 keywords: ["PTLAS", "TLAS", "BLAS", "ray tracing", "partitioned TLAS", "Vulkan", "D3D12", "NVAPI", "rendering engine"]
 ---
 
-A classic TLAS is maintained as one top-level structure over scene instances.
-PTLAS keeps the top-level role, but lets update work be expressed through changed instances and touched partitions.
+Partitioned top-level acceleration structures change the maintenance unit of ray-tracing instance acceleration from one scene-wide top-level structure to partitions plus sparse instance updates. This article compares that model with classic TLAS rebuild/refit, shows the workload where the distinction matters, and keeps one limitation explicit: selectivity only helps if it survives into submitted build/update work.
 
-## The Problem In One Picture
+## Introduction
+
+Large ray-traced scenes rarely move uniformly. A frame may contain millions of renderable instances, while only a narrow wave of characters, debris, vegetation, or simulation objects changes transform data. The acceleration-structure question is whether top-level maintenance can follow that uneven motion instead of treating scene scale and changed work as the same input.
 
 {{< interactive-ptlas-domino-field >}}
 
-## First, The Classic TLAS Baseline
+## Background
 
-BLAS stores geometry acceleration data. TLAS stores scene instances: transform, metadata, and a reference to a BLAS.
+BLAS and TLAS split ray-tracing acceleration by ownership. A BLAS is built from geometry inputs. A TLAS is built from instance records: transform, instance metadata, and a reference to a BLAS.
 
 {{< rt-as-baseline >}}
 
-A TLAS rebuild creates the top-level structure again from the current instance descriptions. A TLAS update/refit reuses a previous update-capable structure and changes instance-side data, usually transforms.
+A TLAS rebuild constructs the top-level structure from the current instance set. A TLAS update/refit reuses an update-capable previous structure and refreshes instance-side data, most often transforms and bounds.
 
-Refit can reduce build work, but it is not automatically better. The classic choice is build cost versus traversal quality inside one top-level structure.
+Rebuild and refit optimize different costs. Rebuild gives the builder freedom to improve top-level layout after broad change. Refit can reduce build work for transform-heavy motion, but repeated updates can preserve a layout that no longer matches the current scene as well.
 
 {{< rt-as-update-modes >}}
 
@@ -51,7 +52,7 @@ Instances still reference BLAS objects. Rays still enter a top-level structure. 
 
 The workload is large enough to separate scene size from changed work: about 170k dynamic dominoes, about 1.2M static board objects, and a uniform 2D partition grid.
 
-| Workload signal | Technical implication |
+| Workload fact | Technical implication |
 |---|---|
 | Uniform 2D partition grid | Partition ownership is spatial and predictable. |
 | Saturated partition cells | The update region is smaller than the world. |
@@ -194,7 +195,7 @@ The decisive boundary is `CPU native operation pack`: sparse logical intent can 
 | Native operation pack | Sparse intent can either survive or become broad work again. |
 | Diagnostics | Captures and overlays must make the selected path, counts, and fallback reasons auditable. |
 
-## The Hard Part Is Not Naming the Feature
+## Native Submission Is The Deciding Step
 
 Dirty-instance filtering happens before the native work packet is built.
 
