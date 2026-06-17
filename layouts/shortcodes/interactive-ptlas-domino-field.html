@@ -1,4 +1,4 @@
-{{/* Narration-first PTLAS partition-field visual inspired by the NVIDIA vk_partitioned_tlas sample. */}}
+{{/* Narration-first TLAS vs PTLAS partition-field comparison. */}}
 <div class="interactive-widget ptlas-field-widget" id="ptlas-field-widget">
   <div class="widget-body">
     <div class="ptlas-field-intro">
@@ -48,11 +48,6 @@
     </div>
 
     <div class="widget-toolbar">
-      <div class="widget-toolbar-left">
-        <span class="ptlas-field-legend muted">partition ownership</span>
-        <span class="ptlas-field-legend moving">falling dominoes</span>
-        <span class="ptlas-field-legend hot">updated work region</span>
-      </div>
       <div class="widget-toolbar-right">
         <button class="widget-pill ptlas-field-replay" type="button">Replay wave</button>
       </div>
@@ -88,26 +83,6 @@
   font-size:.84em;
   line-height:1.5;
 }
-.ptlas-field-legend{
-  display:inline-flex;
-  align-items:center;
-  gap:.4em;
-  font-family:ui-monospace,SFMono-Regular,monospace;
-  font-size:.72em;
-  opacity:.66;
-}
-.ptlas-field-legend::before{
-  content:"";
-  width:.65em;
-  height:.65em;
-  border-radius:2px;
-  border:1px solid currentColor;
-}
-.ptlas-field-legend.muted::before{background:rgba(var(--ds-info-rgb),.12)}
-.ptlas-field-legend.moving{color:var(--ds-info-light)}
-.ptlas-field-legend.moving::before{background:rgba(var(--ds-info-rgb),.4)}
-.ptlas-field-legend.hot{color:var(--ds-danger)}
-.ptlas-field-legend.hot::before{background:rgba(var(--ds-danger-rgb),.55)}
 .ptlas-field-stage{
   position:relative;
   overflow:hidden;

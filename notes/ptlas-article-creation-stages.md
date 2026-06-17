@@ -13,7 +13,7 @@ It exists so article creation becomes a staged engineering task rather than an o
 The goal is to keep the final article:
 
 - grounded in a concrete implementation example
-- backed by real captures and diagnostics
+- backed by captures and diagnostics
 - aligned with the peer audience
 - rich in evidence so it never feels generic
 - focused on reader understanding, not engine promotion
@@ -57,11 +57,11 @@ That means each major section should answer one question:
 - opening visual: what problem are we trying to make obvious before terminology?
 - problem: why is classic TLAS update granularity too broad for local scene changes?
 - solution: what does PTLAS change so the engine can express local top-level work?
-- proof: does a real implementation preserve that selectivity from logical update planning to native submission?
+- proof: does implementation preserve that selectivity from logical update planning to native submission?
 
 The article should also be built around this core argument:
 
-"A PTLAS integration becomes real only when the engine's update stream controls which instances and partitions are rebuilt."
+"A PTLAS integration pays off only when the engine's update stream controls which instances and partitions are rebuilt."
 
 That is the line that should connect:
 
@@ -193,7 +193,7 @@ Exit criteria:
 
 Implementation prompt:
 
-`Gather the authoritative source truth for the PTLAS article. Add only sources that can support real article claims. For each source, record what it proves, what claim it should support, and which SparkleEngine file or diagnostic path it connects to.`
+`Gather the authoritative source truth for the PTLAS article. Add only sources that can support article claims. For each source, record what it proves, what claim it should support, and which SparkleEngine file or diagnostic path it connects to.`
 
 ### Stage 2: Build the evidence package
 
@@ -335,6 +335,7 @@ Stage 5 reader-focus guardrails:
 - SparkleEngine is evidence, not the protagonist
 - avoid phrases such as `already has a real`, `well past exploring`, `many right pieces`, or anything that sounds like feature boasting
 - avoid throat-clearing such as `this article follows`, `to keep this concrete`, or `the useful question is`
+- avoid vague AI-flavored terms such as `handoff`, `real`, `hard part`, `actually`, and `really`; prefer the precise subsystem, boundary, or measurement
 - prefer `implementation example`, `local proof anchor`, `current path`, and `observable gap`
 - keep a Sparkle reference only if it explains TLAS/PTLAS behavior, supports a concrete claim, or makes a limitation visible
 - remove any sentence whose main effect is to praise the engine rather than help the reader understand PTLAS
@@ -433,7 +434,7 @@ Avoid:
 - spending more time on BLAS than needed for the PTLAS contrast
 - putting ownership, rebuild/refit vocabulary, and PTLAS motivation into one overloaded visual
 
-### Section 1: The real bottleneck
+### Section 1: The update-granularity bottleneck
 
 Purpose:
 
@@ -498,7 +499,7 @@ Best evidence:
 
 Purpose:
 
-- show that the article's framing is aligned with real vendor models
+- align the article framing with vendor models
 
 What this section must include:
 
@@ -518,7 +519,7 @@ Avoid:
 
 Purpose:
 
-- use one concrete implementation path to show where PTLAS selectivity can survive or collapse
+- use one implementation path to explain where PTLAS selectivity can survive or collapse
 
 What this section must include:
 
@@ -535,7 +536,7 @@ Best evidence:
 - one small architecture diagram
 - screenshot or table proving diagnostics exist
 
-### Section 6: The hard part
+### Section 6: Where selectivity collapses
 
 Purpose:
 
@@ -558,7 +559,7 @@ Best evidence:
 
 Purpose:
 
-- show the roadmap without pretending it is already done
+- describe the remaining engineering work without implying it is already complete
 
 What this section must include:
 
@@ -837,7 +838,7 @@ Recommended drafting order:
 2. draft the comparison tables
 3. draft the diagrams
 4. write section 5 `Concrete implementation lens`
-5. write section 6 `The hard part`
+5. write section 6 `Where selectivity collapses`
 6. write sections 1-4
 7. write sections 7-8
 8. polish intro and ending last
@@ -892,7 +893,7 @@ Before calling the article ready, check:
 
 - every visualization answers one explicit reader question
 - if a visual answers more than one reader question, split it
-- no two visuals are used to prove the same point unless the second adds real evidence
+- no two visuals are used to prove the same point unless the second adds new evidence
 - each visual is introduced before it appears
 - visual introductions explain how to read the asset, not why the asset is impressive
 - unused widgets can stay in the repo, but should not appear in the live article unless they earn a distinct role

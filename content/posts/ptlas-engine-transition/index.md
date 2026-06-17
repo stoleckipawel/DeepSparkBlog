@@ -7,29 +7,17 @@ authors: ["Pawel Stolecki"]
 description: "A peer-level PTLAS article about what changes when an engine moves from classic TLAS maintenance to partitioned top-level updates."
 tags: ["rendering", "ray-tracing", "ptlas", "vulkan", "d3d12", "engine-architecture"]
 categories: ["analysis"]
-summary: "PTLAS is not just a new API surface. It is a different top-level update model, and its value only appears when localized scene change becomes localized native top-level work."
+summary: "PTLAS is a different top-level update model, and its value appears when localized scene change becomes localized native top-level work."
 showTableOfContents: false
 keywords: ["PTLAS", "TLAS", "BLAS", "ray tracing", "partitioned TLAS", "Vulkan", "D3D12", "NVAPI", "rendering engine"]
 ---
 
-Classic TLAS maintenance is scene-level work: rebuild or refit the top-level structure from the current set of instances.
-PTLAS changes the unit of top-level maintenance from one broad structure to partitions, so a small scene change can be represented as changed instances plus touched partitions.
-
-The hard part is the handoff from intent to execution.
-If an engine detects a small dirty set but submits one broad native write, PTLAS is present architecturally but not yet paying off behaviorally.
+A classic TLAS is maintained as one top-level structure over scene instances.
+PTLAS keeps the top-level role, but lets update work be expressed through changed instances and touched partitions.
 
 ## The Problem In One Picture
 
-The NVIDIA domino demo is intentionally oversized: about 170k dynamic dominoes on a board with about 1.2M static objects.
-That scale makes the PTLAS question visible: can the frame update only the moving instances and the partitions they touch?
-
 {{< interactive-ptlas-domino-field >}}
-
-Read the two panels as the same scene under two maintenance models.
-The left side shows the classic TLAS problem: local motion still maps to a broad top-level update region.
-The right side shows the PTLAS target: saturated cells stay near the touched partitions.
-
-Muted cells show partition ownership, saturated cells show updated top-level work, and domino motion is shared between both panels.
 
 ## First, The Classic TLAS Baseline
 
@@ -59,11 +47,11 @@ Instances still reference BLAS objects. Rays still enter a top-level structure. 
 
 {{< ptlas-structure-slide >}}
 
-## What The NVIDIA Demo Adds
+## What The Domino Workload Adds
 
-The sample is useful because it exposes the update problem at game-scene scale, not because dominoes are special.
+The workload is large enough to separate scene size from changed work: about 170k dynamic dominoes, about 1.2M static board objects, and a uniform 2D partition grid.
 
-| Demo signal | What it teaches |
+| Workload signal | Technical implication |
 |---|---|
 | Uniform 2D partition grid | Partition ownership is spatial and predictable. |
 | Saturated partition cells | The update region is smaller than the world. |
@@ -71,7 +59,7 @@ The sample is useful because it exposes the update problem at game-scene scale, 
 | Updated instance count | Update cost should be read together with how much data changed. |
 | TLAS / PTLAS memory and scratch stats | PTLAS is a different maintenance model, not a free-memory replacement for TLAS. |
 
-In the screenshot state, PTLAS is active, a finite set of instances is moving, the updated partitions are highlighted, and the profiler separates physics, sparse instance-update generation, and top-level update work.
+Good measurements separate physics, sparse instance-update generation, and top-level update work.
 
 ## The Policy Choice
 
@@ -82,7 +70,7 @@ When an instance moves, the engine still has to decide whether to keep that inst
 
 {{< ptlas-partition-policy >}}
 
-The sample's extra checkbox, "mark all dominoes dynamic in partition", makes the tradeoff more aggressive.
+One aggressive global-partition variant marks all dominoes in a touched partition as dynamic.
 If one domino in a partition starts moving, the whole partition's domino set can move to the global partition.
 That can reduce partition rewrites, but it can also make the global partition larger and less spatially coherent.
 
@@ -96,7 +84,7 @@ The main delta is maintenance granularity.
 | Role | Accelerate geometry traversal | Accelerate scene instance traversal | Same top-level traversal role, different maintenance model |
 | Typical frame change | Geometry updates, skinning, rebuild work | Instance transforms, membership, metadata | Instance changes plus partition ownership |
 | Small localized motion cost | Usually local to changed geometry | Often still tied to broad top-level work | Intended to touch only changed instances and affected partitions |
-| Main optimization question | When to rebuild vs update geometry | How much top-level work is redone per frame | How selective the instance and partition update stream really is |
+| Main optimization question | When to rebuild vs update geometry | How much top-level work is redone per frame | How selective the instance and partition update stream is |
 
 Across APIs, the same framing holds: PTLAS is not a different shader-facing concept from TLAS. It is a different model for maintaining top-level scene state.
 
@@ -104,9 +92,9 @@ Across APIs, the same framing holds: PTLAS is not a different shader-facing conc
 
 Partitioning creates a new authoring question: who writes the sparse update description?
 
-The CPU still owns high-level policy, feature selection, sizing, allocation, command recording, and synchronization. Sparse per-frame update data can be produced on the CPU or GPU depending on where simulation and dirty detection live. The actual PTLAS build/update work is still GPU-executed native work.
+The CPU still owns high-level policy, feature selection, sizing, allocation, command recording, and synchronization. Sparse per-frame update data can be produced on the CPU or GPU depending on where simulation and dirty detection live. PTLAS build/update work is still GPU-executed native work.
 
-> PTLAS only pays off when the engine's logical update routing is reflected in the actual native work submission.
+> PTLAS only pays off when the engine's logical update routing is reflected in native work submission.
 
 GPU-driven does not mean the CPU disappears. It means per-frame operation data can be generated and consumed without pulling the whole update decision back to the host.
 
@@ -114,7 +102,7 @@ GPU-driven does not mean the CPU disappears. It means per-frame operation data c
 
 ## How The Sample Generates Sparse Work
 
-In the sample, GPU compute authors the per-frame PTLAS update list.
+GPU compute can author the per-frame PTLAS update list.
 
 {{< mermaid >}}
 flowchart LR
@@ -145,21 +133,21 @@ The PTLAS path can submit a device-authored operation list whose size follows th
 
 The APIs differ, but the behavioral target is consistent: represent top-level change as partition-aware work.
 
-Khronos frames PTLAS around partitions, reuse of previously built top-level work, and explicit PTLAS operations. NVIDIA frames it around selective maintenance in dynamic scenes, plus sizing and policy concerns through sample code and NVAPI. Microsoft frames PTLAS as a persistent partially rebuildable top-level structure with indirect RTAS operations and a first-class global partition concept.
+The common model is partitions, explicit instance operations, optional global dynamic handling, and indirect update data that can be generated without turning every frame into a full scene rewrite.
 
 The behavioral test stays the same across APIs: local scene change should be expressible as local top-level work.
 
-| Concept | Khronos / Vulkan | NVIDIA sample / NVAPI | Microsoft DXR spec | Implementation checkpoint |
-|---|---|---|---|---|
-| Partitioned top-level structure | `VK_NV_partitioned_acceleration_structure` | Partitioned TLAS | Partitioned TLAS / PTLAS | `PartitionedTlas` top-level provider |
-| Write instance op | `WRITE_INSTANCE` | PTLAS write instance operation | Partitioned TLAS write instance | Native operation header `WriteInstance` |
-| Update instance op | `UPDATE_INSTANCE` | PTLAS update instance operation | Partitioned TLAS update instance | Planned/native op concept |
-| Global partition | Global partition concept | Global partition support | Global partition concept | `GlobalPartition` planner/update state |
-| Logical dirty state | App-defined | Moving instances in sample | Indirect operation arguments | Changed-instance update stream |
+| Concept | Vulkan / extension model | D3D12 / RTAS model | Implementation checkpoint |
+|---|---|---|---|
+| Partitioned top-level structure | partitioned acceleration structure | Partitioned TLAS / PTLAS | `PartitionedTlas` top-level provider |
+| Write instance op | `WRITE_INSTANCE` | partitioned TLAS write instance | Native operation header `WriteInstance` |
+| Update instance op | `UPDATE_INSTANCE` | partitioned TLAS update instance | Planned/native op concept |
+| Global partition | global partition concept | global partition concept | `GlobalPartition` planner/update state |
+| Logical dirty state | app-defined changed instances | indirect operation arguments | Changed-instance update stream |
 
 ## A Concrete Implementation Lens
 
-Selectivity has to survive five handoffs:
+Selectivity has to survive five stages:
 
 - frame planning chooses the top-level strategy
 - partition planning decides spatial ownership
@@ -196,14 +184,14 @@ flowchart LR
     F --> J
 {{< /mermaid >}}
 
-The critical boundary is `CPU native operation pack`: sparse logical intent can either remain sparse or collapse into broad writes.
+The decisive boundary is `CPU native operation pack`: sparse logical intent can either remain sparse or collapse into broad writes.
 
 | Checkpoint | What it proves for the reader |
 |---|---|
 | Frame planning | The engine chooses between classic and partitioned top-level strategies before backend work is emitted. |
 | Partition planning | Spatial ownership is explicit enough to reason about local versus global update policy. |
 | Logical update stream | Changed instances can be represented sparsely before native work is packed. |
-| Native operation pack | This is the critical handoff where sparse intent can either survive or become broad work again. |
+| Native operation pack | Sparse intent can either survive or become broad work again. |
 | Diagnostics | Captures and overlays must make the selected path, counts, and fallback reasons auditable. |
 
 ## The Hard Part Is Not Naming the Feature
@@ -212,7 +200,7 @@ Dirty-instance filtering happens before the native work packet is built.
 
 | Evidence point | What to look for |
 |---|---|
-| Logical update stream | The update path filters changed instances and emits only dirty or moved records before handoff. |
+| Logical update stream | The update path filters changed instances and emits only dirty or moved records before native packing. |
 | Logical update count | The frame has a countable sparse update set before it reaches native operation packing. |
 
 The missing proof is whether backend-facing native PTLAS work preserves that selectivity.
@@ -232,7 +220,7 @@ Selective knowledge is not the same thing as selective native work.
 
 ## What Still Has To Change
 
-The next step is making sparse logical updates survive native operation generation, submission policy, and steady-state measurement.
+Sparse logical updates still need to survive native operation generation, submission policy, and steady-state measurement.
 
 | Current state | Target state |
 |---|---|
