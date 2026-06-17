@@ -49,11 +49,12 @@ This document uses the approved working title as the default reference.
 
 The article should read as one continuous narration line:
 
-`classic acceleration structures -> classic TLAS update problem -> PTLAS solution model -> implementation proof`
+`problem visual -> classic acceleration structures -> classic TLAS update problem -> PTLAS solution model -> implementation proof`
 
 That means each major section should answer one question:
 
 - baseline: what is the classic structure/update model?
+- opening visual: what problem are we trying to make obvious before terminology?
 - problem: why is classic TLAS update granularity too broad for local scene changes?
 - solution: what does PTLAS change so the engine can express local top-level work?
 - proof: does a real implementation preserve that selectivity from logical update planning to native submission?

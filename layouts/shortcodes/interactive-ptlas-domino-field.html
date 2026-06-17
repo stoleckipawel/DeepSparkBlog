@@ -3,23 +3,55 @@
   <div class="widget-body">
     <div class="ptlas-field-intro">
       <div class="ptlas-field-kicker">Partition locality</div>
-      <strong>Only the moving region should become hot</strong>
-      <span>The board stays partitioned, but only the cells around falling domino waves are updated this frame.</span>
+      <strong>Same motion, different update footprint</strong>
+      <span>Classic TLAS highlights broad top-level work; PTLAS keeps the hot region near touched partitions.</span>
     </div>
 
     <div class="ptlas-field-stage">
-      <canvas id="ptlas-field-canvas" width="1280" height="690" aria-label="Animated PTLAS domino field"></canvas>
+      <div class="ptlas-field-compare">
+        <figure class="ptlas-field-panel" data-kind="tlas">
+          <figcaption>
+            <b>Classic TLAS</b>
+            <span>one broad top-level update region</span>
+          </figcaption>
+          <canvas class="ptlas-field-canvas" data-mode="tlas" width="1280" height="690" aria-label="Animated classic TLAS domino field"></canvas>
+        </figure>
+        <figure class="ptlas-field-panel" data-kind="ptlas">
+          <figcaption>
+            <b>PTLAS</b>
+            <span>only touched partitions become hot</span>
+          </figcaption>
+          <canvas class="ptlas-field-canvas" data-mode="ptlas" width="1280" height="690" aria-label="Animated PTLAS domino field"></canvas>
+        </figure>
+      </div>
     </div>
 
-    <div class="widget-info ptlas-field-caption" id="ptlas-field-caption">
-      Saturated cells follow the currently falling domino waves.
+    <div class="ptlas-field-stats" aria-label="TLAS and PTLAS sample-scale comparison">
+      <article data-kind="tlas">
+        <h4>Classic TLAS</h4>
+        <dl>
+          <div><dt>Instance work</dt><dd data-stat="tlas-updated">~1.38M</dd></div>
+          <div><dt>AS size</dt><dd>284.82 MB</dd></div>
+          <div><dt>Scratch</dt><dd>103.61 MB</dd></div>
+          <div><dt>Region</dt><dd data-stat="tlas-region">Full TLAS</dd></div>
+        </dl>
+      </article>
+      <article data-kind="ptlas">
+        <h4>PTLAS</h4>
+        <dl>
+          <div><dt>Instance work</dt><dd data-stat="ptlas-updated">12,010</dd></div>
+          <div><dt>AS size</dt><dd>319.13 MB</dd></div>
+          <div><dt>Scratch</dt><dd>110.23 MB</dd></div>
+          <div><dt>Region</dt><dd data-stat="ptlas-region">0 cells</dd></div>
+        </dl>
+      </article>
     </div>
 
     <div class="widget-toolbar">
       <div class="widget-toolbar-left">
         <span class="ptlas-field-legend muted">partition ownership</span>
         <span class="ptlas-field-legend moving">falling dominoes</span>
-        <span class="ptlas-field-legend hot">updated partitions</span>
+        <span class="ptlas-field-legend hot">updated work region</span>
       </div>
       <div class="widget-toolbar-right">
         <button class="widget-pill ptlas-field-replay" type="button">Replay wave</button>
@@ -82,28 +114,111 @@
   border-radius:.5rem;
   border:1px solid color-mix(in srgb,currentColor 8%,transparent);
   background:rgb(var(--color-neutral-100,230,230,234));
+  padding:.6em;
 }
 :is(.dark,.scheme-congo) .ptlas-field-stage{background:rgb(var(--color-neutral-900,11,11,14))}
+.ptlas-field-compare{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.6em;
+}
+.ptlas-field-panel{
+  margin:0;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,currentColor 8%,transparent);
+  border-radius:.45rem;
+  background:rgb(var(--color-neutral-950,8,8,11));
+}
+.ptlas-field-panel figcaption{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:.75em;
+  padding:.55em .65em .45em;
+  border-bottom:1px solid color-mix(in srgb,currentColor 8%,transparent);
+  font-family:ui-monospace,SFMono-Regular,monospace;
+}
+.ptlas-field-panel figcaption b{
+  color:var(--ds-info-light);
+  font-size:.78em;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.ptlas-field-panel[data-kind="tlas"] figcaption b{color:var(--ds-danger)}
+.ptlas-field-panel figcaption span{
+  opacity:.56;
+  font-size:.68em;
+  text-align:right;
+}
 .ptlas-field-stage canvas{
   display:block;
   width:100%;
   height:auto;
 }
-.ptlas-field-caption{
-  margin:.45em 0 0;
+.ptlas-field-stats{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.6em;
+  margin:.55em 0 0;
+}
+.ptlas-field-stats article{
+  border:1px solid color-mix(in srgb,currentColor 8%,transparent);
+  border-radius:.45rem;
+  background:rgba(var(--ds-info-rgb),.035);
+  padding:.58em .65em .64em;
+}
+:is(.dark,.scheme-congo) .ptlas-field-stats article{background:rgb(var(--color-neutral-900,11,11,14))}
+.ptlas-field-stats article[data-kind="tlas"]{border-top:2px solid var(--ds-danger)}
+.ptlas-field-stats article[data-kind="ptlas"]{border-top:2px solid var(--ds-info)}
+.ptlas-field-stats h4{
+  margin:0 0 .5em;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.72em;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.ptlas-field-stats dl{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:.45em;
+  margin:0;
+}
+.ptlas-field-stats div{
+  min-width:0;
+}
+.ptlas-field-stats dt{
+  opacity:.5;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.62em;
+  font-weight:700;
+  letter-spacing:.04em;
+  margin:0 0 .14em;
+  text-transform:uppercase;
+}
+.ptlas-field-stats dd{
+  margin:0;
+  font-size:.84em;
+  font-weight:700;
+  line-height:1.2;
+  white-space:nowrap;
 }
 @media (max-width: 900px){
   .ptlas-field-intro{gap:.28em}
+  .ptlas-field-compare{grid-template-columns:1fr}
+  .ptlas-field-stats{grid-template-columns:1fr}
+  .ptlas-field-stats dl{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 </style>
 
 <script>
 (function(){
   const root = document.getElementById("ptlas-field-widget");
-  const canvas = document.getElementById("ptlas-field-canvas");
-  if(!root || !canvas) return;
+  const canvases = Array.from(root ? root.querySelectorAll(".ptlas-field-canvas") : []);
+  if(!root || canvases.length === 0) return;
 
-  const ctx = canvas.getContext("2d");
+  let canvas = canvases[0];
+  let ctx = canvas.getContext("2d");
   const cols = 16;
   const rows = 10;
   const mode = 2;
@@ -117,6 +232,12 @@
   const danger = `rgb(${dangerRgb})`;
   const neutral100Rgb = cssVar("--color-neutral-100", "230,230,234");
   const neutral300Rgb = cssVar("--color-neutral-300", "161,161,170");
+  const stats = {
+    tlasUpdated: root.querySelector('[data-stat="tlas-updated"]'),
+    tlasRegion: root.querySelector('[data-stat="tlas-region"]'),
+    ptlasUpdated: root.querySelector('[data-stat="ptlas-updated"]'),
+    ptlasRegion: root.querySelector('[data-stat="ptlas-region"]')
+  };
 
   const tileColors = [];
   for(let y=0;y<rows;y++){
@@ -164,14 +285,35 @@
     }
   }
 
-  function pathWaveT(path, t){
-    return (t + (path.offset || 0)) % 1;
+  function pathDuration(path){
+    return 1800 + path.len * 1250;
   }
 
-  function hotCells(t){
+  function pathDelay(path){
+    return (path.offset || 0) * 700;
+  }
+
+  function pathWaveT(path, state){
+    return clamp((state.elapsed - pathDelay(path)) / pathDuration(path), 0, 1);
+  }
+
+  function cycleState(now){
+    const longest = paths.reduce((max, path) => Math.max(max, pathDelay(path) + pathDuration(path)), 0);
+    const quietMs = 1100;
+    const cycleMs = longest + quietMs;
+    const elapsed = (now - startedAt) % cycleMs;
+    const active = elapsed < longest;
+    const quiet = active ? 0 : smoothstep(longest, cycleMs, elapsed);
+    return {elapsed, active, quiet, longest};
+  }
+
+  function hotCells(state){
     const map = new Map();
+    if(!state.active) return map;
     paths.forEach(path => {
-      const center = pathPoint(path, pathWaveT(path, t));
+      const progress = pathWaveT(path, state);
+      if(progress <= 0 || progress >= 1) return;
+      const center = pathPoint(path, progress);
       for(let y=0;y<rows;y++){
         for(let x=0;x<cols;x++){
           const dx = (x + .5) - center.gx;
@@ -207,8 +349,8 @@
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  function drawBoard(t){
-    const hot = hotCells(t);
+  function drawBoard(state, mode){
+    const hot = hotCells(state);
     for(let y=0;y<rows;y++){
       for(let x=0;x<cols;x++){
         const p0 = project(x,y);
@@ -216,7 +358,7 @@
         const p2 = project(x+1,y+1);
         const p3 = project(x,y+1);
         const color = tileColors[y*cols+x];
-        const heat = hot.get(`${x},${y}`) || 0;
+        const heat = mode === "ptlas" ? (hot.get(`${x},${y}`) || 0) : 0;
         const baseAlpha = .72;
         let fill = `hsla(${color.h},${color.s}%,${color.l}%,${baseAlpha})`;
         let stroke = "rgba(213,231,244,.14)";
@@ -228,6 +370,14 @@
         }
         drawPoly([p0,p1,p2,p3], fill, stroke, width);
       }
+    }
+
+    if(mode === "tlas" && state.active){
+      const p0 = project(0,0);
+      const p1 = project(cols,0);
+      const p2 = project(cols,rows);
+      const p3 = project(0,rows);
+      drawPoly([p0,p1,p2,p3], `rgba(${dangerRgb},.18)`, `rgba(${dangerRgb},.56)`, 2.2);
     }
 
     for(let x=0;x<=cols;x+=2){
@@ -259,11 +409,11 @@
   }
 
   const paths = [
-    {x:1.3,y:4.2,len:6.8,amp:.62,freq:2.5,phase:1.6,offset:.08},
-    {x:4.0,y:6.15,len:7.9,amp:.62,freq:2.1,phase:.4,offset:0,primary:true},
-    {x:.6,y:8.4,len:6.2,amp:.38,freq:2.4,phase:1.0,offset:.32},
-    {x:10.4,y:6.7,len:5.4,amp:.55,freq:2.2,phase:.8,offset:.2},
-    {x:3.4,y:1.3,len:5.8,amp:.34,freq:2.4,phase:2.5,offset:.86}
+    {x:1.3,y:4.2,len:3.0,amp:.52,freq:1.8,phase:1.6,offset:.08},
+    {x:3.2,y:6.15,len:10.2,amp:.62,freq:2.1,phase:.4,offset:0,primary:true},
+    {x:.6,y:8.4,len:4.5,amp:.38,freq:2.2,phase:1.0,offset:.22},
+    {x:8.6,y:6.7,len:7.2,amp:.55,freq:2.2,phase:.8,offset:.12},
+    {x:3.4,y:1.3,len:2.5,amp:.34,freq:2.0,phase:2.5,offset:.16}
   ];
 
   function drawDomino(screen, tangentAngle, progress, scale, weight){
@@ -334,7 +484,7 @@
     ctx.restore();
   }
 
-  function drawPath(path, t){
+  function drawPath(path, state){
     const samples = 84;
     const points = [];
     for(let i=0;i<samples;i++){
@@ -352,7 +502,7 @@
     ctx.lineWidth = path.primary ? 2.1 : 1.45;
     ctx.stroke();
 
-    const localT = pathWaveT(path, t);
+    const localT = pathWaveT(path, state);
     const step = path.primary ? 3 : 5;
     for(let i=0;i<samples;i+=step){
       const k = i / (samples - 1);
@@ -365,18 +515,53 @@
       const delay = (hash01(seed) - .5) * .035;
       const weight = hash01(seed + 13);
       const speed = lerp(.055, .105, 1 - weight);
-      const waveProgress = smoothstep(-.2 + delay, speed + delay, localT - k);
+      const waveProgress = state.active ? smoothstep(-.2 + delay, speed + delay, localT - k) : 1;
       const settle = Math.max(0, 1 - Math.abs(waveProgress - .82) * 5);
-      const localRipple = Math.sin((t * 3.5 + k * 9 + weight * 2) * Math.PI) * .03 * settle * (1 - weight * .45);
+      const localRipple = state.active ? Math.sin(((state.elapsed / 1800) + k * 9 + weight * 2) * Math.PI) * .03 * settle * (1 - weight * .45) : 0;
       drawDomino(current, tangentAngle, clamp(waveProgress + localRipple, 0, 1), path.primary ? pathScale : pathScale * .78, weight);
     }
   }
 
+  function estimateMovingCount(state){
+    if(!state.active) return 0;
+    let moving = 0;
+    paths.forEach((path, pathIndex) => {
+      const localT = pathWaveT(path, state);
+      const samples = 84;
+      const step = path.primary ? 3 : 5;
+      for(let i=0;i<samples;i+=step){
+        const k = i / (samples - 1);
+        const seed = (pathIndex + 1) * 101 + i * 17;
+        const delay = (hash01(seed) - .5) * .035;
+        const weight = hash01(seed + 13);
+        const speed = lerp(.055, .105, 1 - weight);
+        const p = smoothstep(-.2 + delay, speed + delay, localT - k);
+        if(p > .05 && p < .98) moving++;
+      }
+    });
+    return moving;
+  }
+
+  function updateStats(state){
+    const hotCount = hotCells(state).size;
+    const moving = estimateMovingCount(state);
+    const updated = state.active ? Math.round(Math.pow(clamp(moving / 18, 0, 1), 1.15) * 12010) : 0;
+    if(stats.tlasUpdated) stats.tlasUpdated.textContent = state.active && moving > 0 ? "~1.38M" : "0";
+    if(stats.tlasRegion) stats.tlasRegion.textContent = state.active && moving > 0 ? "Full TLAS" : "Idle";
+    if(stats.ptlasUpdated) stats.ptlasUpdated.textContent = updated.toLocaleString("en-US");
+    if(stats.ptlasRegion) stats.ptlasRegion.textContent = hotCount > 0 ? `${hotCount} cells` : "Idle";
+  }
+
   function render(now){
-    const t = ((now - startedAt) % 5600) / 5600;
-    drawBackground();
-    drawBoard(t);
-    paths.forEach(path => drawPath(path, t));
+    const state = cycleState(now);
+    canvases.forEach(target => {
+      canvas = target;
+      ctx = canvas.getContext("2d");
+      drawBackground();
+      drawBoard(state, canvas.dataset.mode || "ptlas");
+      paths.forEach(path => drawPath(path, state));
+    });
+    updateStats(state);
     raf = requestAnimationFrame(render);
   }
 

@@ -18,6 +18,19 @@ PTLAS changes the unit of top-level maintenance from one broad structure to part
 The hard part is the handoff from intent to execution.
 If an engine detects a small dirty set but submits one broad native write, PTLAS is present architecturally but not yet paying off behaviorally.
 
+## The Problem In One Picture
+
+The NVIDIA domino demo is intentionally oversized: about 170k dynamic dominoes on a board with about 1.2M static objects.
+That scale makes the PTLAS question visible: can the frame update only the moving instances and the partitions they touch?
+
+{{< interactive-ptlas-domino-field >}}
+
+Read the two panels as the same scene under two maintenance models.
+The left side shows the classic TLAS problem: local motion still maps to a broad top-level update region.
+The right side shows the PTLAS target: saturated cells stay near the touched partitions.
+
+Muted cells show partition ownership, saturated cells show updated top-level work, and domino motion is shared between both panels.
+
 ## First, The Classic TLAS Baseline
 
 BLAS stores geometry acceleration data. TLAS stores scene instances: transform, metadata, and a reference to a BLAS.
@@ -46,15 +59,9 @@ Instances still reference BLAS objects. Rays still enter a top-level structure. 
 
 {{< ptlas-structure-slide >}}
 
-## The NVIDIA Domino Demo In One Frame
+## What The NVIDIA Demo Adds
 
-The demo scene is intentionally oversized: about 170k dynamic dominoes on a board with about 1.2M static objects.
-That scale makes the PTLAS question visible: can the frame update only the moving instances and the partitions they touch?
-
-{{< interactive-ptlas-domino-field >}}
-
-Read the colors as state, not decoration.
-Muted cells show partition ownership, saturated cells show partitions updated by the current moving wave, and domino color shows which partition an instance belongs to.
+The sample is useful because it exposes the update problem at game-scene scale, not because dominoes are special.
 
 | Demo signal | What it teaches |
 |---|---|

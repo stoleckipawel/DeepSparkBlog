@@ -66,7 +66,7 @@ Current live visual contract:
 | `rt-as-baseline.html` | What does BLAS own, and what does TLAS own? | Yes |
 | `rt-as-update-modes.html` | What is the classic rebuild vs update/refit tradeoff? | Yes |
 | `ptlas-structure-slide.html` | What is PTLAS structurally? | Yes |
-| `interactive-ptlas-domino-field.html` | What behavior do we want: broad world, local hot update region? | Yes |
+| `interactive-ptlas-domino-field.html` | What changes visually between broad TLAS maintenance and localized PTLAS partition maintenance? | Yes |
 | `ptlas-partition-policy.html` | Which update policy should moving instances use: local partition, global partition, or hybrid? | Yes |
 | `ptlas-cpu-gpu-split.html` | Who prepares update data and who executes native PTLAS work? | Yes |
 | Sparkle architecture Mermaid | Where can Sparkle preserve or lose selectivity? | Yes |
@@ -245,8 +245,17 @@ Preferred widget behavior:
 Current live article implementation:
 
 - `layouts/shortcodes/interactive-ptlas-domino-field.html`
-- article placement: immediately after `Read The Picture First`
-- purpose: make the NVIDIA-style "broad world, local update" model obvious before the article enters implementation architecture
+- article placement: immediately after the thesis intro, before the classic TLAS baseline
+- purpose: compare the same falling-domino scene under classic TLAS broad update behavior and PTLAS localized partition update behavior before the article enters implementation architecture
+
+Current comparison behavior:
+
+- left panel: classic TLAS view, where local motion maps to one broad top-level update region
+- right panel: PTLAS view, where saturated cells follow only touched partitions
+- both panels share the same domino motion so the visual difference is maintenance granularity, not scene content
+- diagnostics are live, not static: active falling waves produce update values, quiet/settled moments drop TLAS and PTLAS update state toward idle
+- domino paths have different lengths and durations; shorter paths settle earlier, longer paths keep the update counters alive, and reset waits until every path has finished plus a short quiet pause
+- mirrored stat rows should stay compact: `Instance work`, `AS size`, `Scratch`, `Region`
 
 ### 5.4 Domino Sample Policy Tradeoff
 
