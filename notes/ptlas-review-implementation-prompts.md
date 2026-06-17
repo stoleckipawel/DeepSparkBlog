@@ -139,7 +139,7 @@ Rules:
 - use captured values when available
 - if a value is not captured yet, write `capture needed`
 - do not present sample UI values as SparkleEngine proof unless they came from SparkleEngine capture
-- do not claim PTLAS is faster until native submitted work is captured
+- do not claim PTLAS is faster until backend command scope and timings are captured
 ```
 
 Suggested table:
@@ -232,13 +232,13 @@ Include:
 - global partition population
 
 Also preserve the distinction between:
-- logical selectivity
-- submitted native work
+- engine-side dirty update records
+- backend build/update command scope
 ```
 
 Internal do-not-claim list:
 
-- do not claim PTLAS is faster until native submitted work is captured
+- do not claim PTLAS is faster until backend command scope and timings are captured
 - do not claim memory improves
 - do not claim global partition is better than local partition
 - do not compare backend maturity without matching captures
@@ -345,6 +345,17 @@ Exit criteria:
 
 - visual either stays unchanged with justification or gets a follow-up split task
 - no sixth major visual is added in this pass
+
+Pass 7 result:
+
+- screenshot captured: `notes/screenshots/ptlas-pass7-proposed-model.png`
+- tall page screenshot captured: `notes/screenshots/ptlas-pass7-tall-page.png`
+- decision: keep the current visual for now
+- reason: the rendered card is readable in context and does not compete with the opening TLAS/PTLAS widget
+- risk: it combines storage model and update model in one card
+- follow-up split task: if the card feels dense during live preview, replace it with two focused visuals instead of adding a new visual
+- split target A: storage model, showing BLAS reuse, instance-index pool, partitions, and global partition
+- split target B: update model, showing changed instance records, touched partitions, and indirect build/update operation input
 
 ## Pass 8: Final Review Against Quality Gates
 

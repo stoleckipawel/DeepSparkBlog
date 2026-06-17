@@ -1,0 +1,39 @@
+{
+  "capture_status": "capture needed",
+  "capture_source": "capture needed",
+  "frame_id": "capture needed",
+  "scene": {
+    "scene_instances": "capture needed",
+    "dynamic_instances": "capture needed",
+    "static_instances": "capture needed"
+  },
+  "strategy": {
+    "selected_path": "capture needed",
+    "ptlas_enabled": "capture needed",
+    "partition_policy": "capture needed"
+  },
+  "engine_side_records": {
+    "changed_instance_count": "capture needed",
+    "rewritten_instance_count": "capture needed",
+    "touched_partition_count": "capture needed",
+    "global_partition_population": "capture needed"
+  },
+  "backend_command_scope": {
+    "native_operation_type_count": "capture needed",
+    "native_operation_count": "capture needed",
+    "backend_packet_scope": "capture needed",
+    "covers_full_top_level": "capture needed"
+  },
+  "timings_ms": {
+    "tlas_update_time_ms": "capture needed",
+    "ptlas_update_time_ms": "capture needed",
+    "update_record_generation_ms": "capture needed",
+    "render_ms": "capture needed"
+  },
+  "memory_mb": {
+    "tlas_memory_mb": "capture needed",
+    "ptlas_memory_mb": "capture needed",
+    "tlas_scratch_mb": "capture needed",
+    "ptlas_scratch_mb": "capture needed"
+  }
+}

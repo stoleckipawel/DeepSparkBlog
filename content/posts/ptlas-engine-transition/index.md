@@ -12,7 +12,7 @@ showTableOfContents: false
 keywords: ["PTLAS", "TLAS", "BLAS", "ray tracing", "partitioned TLAS", "Vulkan", "D3D12", "NVAPI", "rendering engine"]
 ---
 
-Partitioned top-level acceleration structures change the maintenance unit of ray-tracing instance acceleration from one scene-wide top-level structure to partitions plus sparse instance updates. This article compares that model with classic TLAS rebuild/refit, shows the workload where the distinction matters, and keeps one limitation explicit: selectivity only helps if it survives into submitted build/update work.
+Partitioned top-level acceleration structures change the maintenance unit of ray-tracing instance acceleration from one scene-wide top-level structure to partitions plus sparse instance updates. This article compares that model with classic TLAS rebuild/refit, shows the workload where the distinction matters, and states the evidence requirement directly: changed-instance and touched-partition counts need to be reflected in backend build/update commands, not stop at engine-side planning.
 
 ## Introduction
 
@@ -34,7 +34,7 @@ Rebuild and refit optimize different costs. Rebuild gives the builder freedom to
 
 ## Related Work And API Context
 
-The API surface differs by backend, but the useful comparison is small: what data names the top-level structure, what data names changed instances, and what data lets the update be submitted without rewriting the whole scene.
+The API surface differs by backend, but the comparison needs only three questions: what data names the top-level structure, what data names changed instances, and what data lets the renderer issue update commands without rewriting the whole scene.
 
 | Article term | Vulkan-side model | D3D12-side model | Role in the article |
 |---|---|---|---|
@@ -57,21 +57,35 @@ Classic TLAS maintenance has one broad lane: instance records feed one top-level
 
 Instance records still reference BLAS objects, and rays still traverse a top-level acceleration structure. The changed part is the update description: a frame can name changed instances, touched partitions, and a global partition for highly dynamic instances.
 
-{{< ptlas-structure-slide >}}
+{{< ptlas-storage-model >}}
 
-## What The Domino Workload Adds
+{{< ptlas-update-model >}}
 
-The workload is large enough to separate scene size from changed work: about 170k dynamic dominoes, about 1.2M static board objects, and a uniform 2D partition grid.
+## Example Workload
+
+The sample workload is large enough to separate scene size from changed work: about 170k dynamic instances, about 1.2M static board objects, and a uniform 2D partition grid.
 
 | Workload fact | Technical implication |
 |---|---|
 | Uniform 2D partition grid | Partition ownership is spatial and predictable. |
 | Saturated partition cells | The update region is smaller than the world. |
-| Moving domino set | Per-frame change starts as changed instance transforms. |
+| Moving instance set | Per-frame change starts as changed instance transforms. |
 | Updated instance count | Update cost should be read together with how much data changed. |
 | TLAS / PTLAS memory and scratch stats | PTLAS is a different maintenance model, not a free-memory replacement for TLAS. |
 
 Good measurements separate physics, sparse instance-update generation, and top-level update work.
+
+### Evidence Snapshot
+
+| Capture field | Classic TLAS | PTLAS |
+|---|---:|---:|
+| Scene instances | about 1.38M workload objects | about 1.38M workload objects |
+| Changed instances | capture needed | capture needed |
+| Maintained top-level region | full TLAS | touched partitions: capture needed |
+| Top-level update time | capture needed | capture needed |
+| Scratch or memory | capture needed | capture needed |
+
+Rows marked `capture needed` define the engine evidence required before any performance claim is made.
 
 ## Update Policy Tradeoffs
 
@@ -79,86 +93,39 @@ Partitioning adds a policy decision for moving instances: keep them in their spa
 
 {{< ptlas-partition-policy >}}
 
-| Policy | Update cost | Trace coherence | Camera use | Risk |
-|---|---|---|---|---|
-| Update local partition | Higher when a partition contains many instances | Strong spatial grouping | Good near the camera | Many local partition rewrites |
-| Move dynamic to global | Lower for moving objects | Weaker spatial grouping | Useful away from focus | Global partition growth |
-| Hybrid by distance | Mixed | Preserves nearby grouping | Distance threshold controls behavior | Threshold tuning becomes visible |
-
-An aggressive global-partition variant can move every domino from a touched partition into global. That reduces local partition rewrites, but the global partition may contain more than the currently moving set.
-
-## The Delta In One Table
-
-The main delta is maintenance granularity.
-
-| Aspect | BLAS | Classic TLAS | PTLAS |
-|---|---|---|---|
-| Owns | Geometry acceleration data for one mesh or mesh group | Scene-level instances of BLAS objects | Scene-level instances organized into partitions |
-| Role | Accelerate geometry traversal | Accelerate scene instance traversal | Same top-level traversal role, different maintenance model |
-| Typical frame change | Geometry updates, skinning, rebuild work | Instance transforms, membership, metadata | Instance changes plus partition ownership |
-| Small localized motion cost | Usually local to changed geometry | Often still tied to broad top-level work | Intended to touch only changed instances and affected partitions |
-| Main optimization question | When to rebuild vs update geometry | How much top-level work is redone per frame | How selective the instance and partition update stream is |
-
-Across APIs, the same framing holds: PTLAS is not a different shader-facing concept from TLAS. It is a different model for maintaining top-level scene state.
+An aggressive global-partition variant can move every dynamic instance from a touched partition into global. That reduces local partition rewrites, but the global partition may contain more than the currently moving set.
 
 ## Implementation Method
 
-The implementation path is easiest to audit as five boundaries. Each boundary can preserve selectivity or widen the work again.
+The implementation path is easiest to audit as five boundaries. Each boundary can keep work scoped to changed instances and touched partitions, or widen the work again.
 
-{{< mermaid >}}
-flowchart LR
-    A["RenderSceneData"]
-    B["Frame planning"]
-    C["Partition planning"]
-    D["Logical update stream"]
-    E["Strategy prepare"]
-    F["Strategy build"]
-    G["Upload update records"]
-    H["CPU native operation pack"]
-    I["Native PTLAS provider"]
-    J["Smoke diagnostics / debug overlay"]
-
-    A --> B
-    B --> C
-    B --> D
-    C --> E
-    D --> F
-    E --> F
-    F --> G
-    G --> H
-    H --> I
-    C --> J
-    D --> J
-    F --> J
-{{< /mermaid >}}
-
-Frame planning chooses the top-level strategy for the frame. Partition planning assigns spatial ownership and global-partition policy. The logical update stream records dirty or moved instances before backend packing. The native operation pack converts that stream into backend-visible PTLAS work. Diagnostics record counts, selected paths, and fallback reasons.
+{{< ptlas-implementation-pipeline >}}
 
 {{< ptlas-cpu-gpu-split >}}
 
-Sparse update authoring can happen on the CPU or GPU. The important boundary is the native operation pack: changed-instance records and touched partitions either remain compact there, or the backend receives broad top-level writes.
-
-| Boundary | What to verify |
-|---|---|
-| Frame planning | The selected path is classic TLAS or PTLAS before backend work begins. |
-| Partition planning | Local and global ownership are explicit. |
-| Logical update stream | Dirty instances are countable before packing. |
-| Native operation pack | Backend work follows changed instances and touched partitions. |
-| Diagnostics | Captures expose path, counts, and fallback reason. |
+Sparse update authoring can happen on the CPU or GPU. The boundary to verify is the native operation pack: changed-instance records and touched partitions either remain compact there, or the backend receives broad top-level writes.
 
 ## Evidence And Current Limitations
 
-The current evidence separates logical selectivity from submitted native work. That distinction matters: an engine can know which instances changed before it has proven that the backend received a similarly compact update.
+The current evidence separates engine-side planning from backend-visible commands. That distinction matters: an engine can count changed instances before it has proven that backend build/update commands are scoped to those instances and partitions.
 
 | Evidence checkpoint | Represented now | Still needs proof |
 |---|---|---|
 | Frame strategy | Classic and partitioned paths can be selected and diagnosed. | Compare timings under the same scene and camera state. |
 | Partition planning | Local and global ownership can be reasoned about before backend work. | Export partition occupancy and migration counts per frame. |
 | Logical update stream | Dirty or moved instances can be counted before native packing. | Track rewritten-instance count beside changed-instance count. |
-| Native operation pack | Backend submission is visible as a separate boundary. | Break down native op type, op count, and touched partitions. |
+| Native operation pack | Backend command packets are visible as a separate boundary. | Break down native op type, op count, and touched partitions. |
 | Smoke capture / overlay | PTLAS path, counts, and fallback state can be captured. | Store runtime config with every evidence bundle. |
 
-The measurable limitation is the native operation pack. Logical update records may be sparse while the submitted packet still covers more top-level state than the changed set requires.
+The measurable limitation is backend command scope. Engine-side update records may be sparse while the backend packet still covers more top-level state than the changed instances and touched partitions require.
+
+Capture checklist:
+
+- changed-instance count
+- rewritten-instance count
+- touched-partition count
+- native operation type and count
+- global partition population
 
 ## Discussion
 
@@ -174,15 +141,28 @@ Timing numbers need those counts beside them. A lower update time with a much la
 
 - TLAS remains one top-level instance acceleration structure.
 - PTLAS changes how top-level updates can be expressed: changed instances, touched partitions, and global dynamic movement.
-- The useful measurement is whether changed scene work stays compact through native submission.
+- The useful measurement is whether backend build/update commands are scoped to changed instances and touched partitions.
 
 ## Resources
 
 - [NVIDIA DXR tutorial: BLAS and TLAS ownership](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
 - [NVIDIA Vulkan ray tracing tutorial: acceleration structure construction](https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/concepts/acceleration-structures/)
 - [NVIDIA RTX best practices: TLAS rebuild and refit tradeoffs](https://developer.nvidia.com/blog/rtx-best-practices/)
+- [NVIDIA best practices using RTX ray tracing](https://developer.nvidia.com/blog/best-practices-using-nvidia-rtx-ray-tracing/)
+- [NVIDIA engine integration article](https://developer.nvidia.com/blog/effectively-integrating-rtx-ray-tracing-real-time-rendering-engine/)
+- [NVIDIA optimal meshes for ray tracing](https://developer.nvidia.com/blog/creating-optimal-meshes-for-ray-tracing/)
 - [NVIDIA vk_partitioned_tlas sample](https://github.com/nvpro-samples/vk_partitioned_tlas)
 - [NVIDIA RTX Mega Geometry Vulkan samples overview](https://developer.nvidia.com/blog/nvidia-rtx-mega-geometry-now-available-with-new-vulkan-samples/)
 - [NVIDIA RTX innovations: Mega Geometry foliage and Witcher context](https://developer.nvidia.com/blog/nvidia-rtx-innovations-are-powering-the-next-era-of-game-development/)
-- Khronos Vulkan PTLAS material
-- Microsoft DirectX ray tracing / RTAS material
+- [NVIDIA NVAPI DirectX documentation](https://docs.nvidia.com/nvapi/group__dx.html)
+- [NVIDIA NVAPI PTLAS indirect input structure](https://docs.nvidia.com/nvapi/struct__NVAPI__D3D12__BUILD__RAYTRACING__PARTITIONED__TLAS__INDIRECT__INPUTS.html)
+- [AMD GPUOpen Radeon Raytracing Analyzer overview](https://gpuopen.com/radeon-raytracing-analyzer/)
+- [AMD GPUOpen: improving raytracing performance with RRA](https://gpuopen.com/learn/improving-rt-perf-with-rra/)
+- [AMD GPUOpen RRA manual: TLAS windows](https://gpuopen.com/manuals/rra_manual/tlas_windows/)
+- [AMD GPUOpen RRA 1.3 traversal analysis](https://gpuopen.com/learn/rra_1_3/)
+- [AMD GPUOpen Far Cry 6 hybrid ray-traced reflections deck](https://gpuopen.com/download/GDC_Performant_Reflective_Beauty_Hybrid_Ray_Traced_Reflections_In_Far_Cry_6.pdf)
+- [Khronos Vulkan PTLAS proposal](https://github.com/KhronosGroup/Vulkan-Docs/blob/main/proposals/VK_NV_partitioned_acceleration_structure.adoc)
+- [Khronos Vulkan PTLAS reference page](https://docs.vulkan.org/refpages/latest/refpages/source/VK_NV_partitioned_acceleration_structure.html)
+- [Khronos PTLAS operation type reference](https://docs.vulkan.org/refpages/latest/refpages/source/VkPartitionedAccelerationStructureOpTypeNV.html)
+- [Microsoft DirectX ray tracing functional spec, part 2](https://microsoft.github.io/DirectX-Specs/d3d/Raytracing2.html)
+- [Vulkan dynamic ray-tracing sample](https://docs.vulkan.org/samples/latest/samples/extensions/ray_tracing_extended/README.html)

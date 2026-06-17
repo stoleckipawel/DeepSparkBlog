@@ -1,0 +1,160 @@
+{{/* Focused PTLAS storage model visual. */}}
+<section class="ptlas-storage" aria-label="PTLAS storage model">
+  <div class="ptlas-storage-head">
+    <div>
+      <div class="ptlas-storage-kicker">Storage model</div>
+      <h3>What PTLAS contains</h3>
+    </div>
+    <p>Instance records reference BLAS objects and map into partition-owned index ranges.</p>
+  </div>
+
+  <div class="ptlas-storage-diagram" aria-hidden="true">
+    <div class="ptlas-storage-row blas">
+      <div class="ptlas-storage-box blas-box">BLAS</div>
+      <div class="ptlas-storage-box blas-box">BLAS</div>
+      <div class="ptlas-storage-box blas-box">BLAS</div>
+    </div>
+    <div class="ptlas-storage-links">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="ptlas-storage-pool">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <strong>instance-index pool</strong>
+    </div>
+    <div class="ptlas-storage-partitions">
+      <div class="ptlas-storage-box partition">partition A</div>
+      <div class="ptlas-storage-box partition">partition B</div>
+      <div class="ptlas-storage-box global">global partition</div>
+    </div>
+  </div>
+</section>
+
+<style>
+.ptlas-storage{
+  margin:1.5em 0 .8em;
+  padding:.75em;
+  border:1px solid transparent;
+  border-radius:.75rem;
+  background:rgb(var(--color-neutral-50,245,245,247));
+  color:inherit;
+}
+:is(.dark,.scheme-congo) .ptlas-storage{background:rgb(var(--color-neutral-800,18,18,22))}
+.ptlas-storage-head{
+  display:grid;
+  grid-template-columns:minmax(14rem,.52fr) minmax(18rem,1fr);
+  gap:.75em;
+  align-items:end;
+  margin-bottom:.75em;
+}
+.ptlas-storage-kicker{
+  color:var(--ds-success-light);
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.68em;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.ptlas-storage h3{
+  margin:.15em 0 0;
+  font-size:1.02em;
+  line-height:1.25;
+}
+.ptlas-storage-head p{
+  margin:0;
+  opacity:.66;
+  font-size:.86em;
+  line-height:1.5;
+}
+.ptlas-storage-diagram{
+  border:1px solid color-mix(in srgb,currentColor 8%,transparent);
+  border-radius:.55rem;
+  background:rgba(var(--ds-info-rgb),.035);
+  padding:.9em;
+}
+:is(.dark,.scheme-congo) .ptlas-storage-diagram{background:rgb(var(--color-neutral-900,11,11,14))}
+.ptlas-storage-row,
+.ptlas-storage-partitions{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.8em;
+}
+.ptlas-storage-box{
+  border-radius:.45rem;
+  padding:.7em .8em;
+  text-align:center;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.82em;
+  font-weight:800;
+}
+.ptlas-storage-box.blas-box{
+  border:1px solid rgba(var(--ds-warn-rgb),.52);
+  background:rgba(var(--ds-warn-rgb),.12);
+}
+.ptlas-storage-box.partition{
+  border:1px solid rgba(var(--ds-info-rgb),.55);
+  background:rgba(var(--ds-info-rgb),.16);
+}
+.ptlas-storage-box.global{
+  border:1px solid rgba(var(--ds-danger-rgb),.52);
+  background:rgba(var(--ds-danger-rgb),.12);
+}
+.ptlas-storage-links{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.8em;
+  height:2.25em;
+}
+.ptlas-storage-links span{
+  position:relative;
+}
+.ptlas-storage-links span::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:.1em;
+  width:1px;
+  height:1.75em;
+  background:color-mix(in srgb,currentColor 30%,transparent);
+}
+.ptlas-storage-links span::after{
+  content:"";
+  position:absolute;
+  left:calc(50% - .24em);
+  bottom:.18em;
+  width:.48em;
+  height:.48em;
+  border-right:2px solid color-mix(in srgb,currentColor 35%,transparent);
+  border-bottom:2px solid color-mix(in srgb,currentColor 35%,transparent);
+  transform:rotate(45deg);
+}
+.ptlas-storage-pool{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  border:1px solid rgba(var(--ds-info-rgb),.36);
+  border-radius:.45rem;
+  overflow:hidden;
+  margin-bottom:1em;
+}
+.ptlas-storage-pool span{
+  min-height:2.8em;
+  border-right:1px solid rgba(var(--ds-info-rgb),.26);
+  background:rgba(var(--ds-info-rgb),.1);
+}
+.ptlas-storage-pool span:last-of-type{border-right:0}
+.ptlas-storage-pool strong{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.8em;
+}
+@media (max-width: 900px){
+  .ptlas-storage-head,
+  .ptlas-storage-row,
+  .ptlas-storage-partitions{grid-template-columns:1fr}
+  .ptlas-storage-links{display:none}
+}
+</style>

@@ -1,0 +1,14 @@
+capture_field,classic_tlas,ptlas,source_file,notes
+scene_instances,capture needed,capture needed,capture needed,total traceable scene instances for the compared frame
+changed_instance_count,capture needed,capture needed,capture needed,instances whose transform/partition state changed this frame
+rewritten_instance_count,capture needed,capture needed,capture needed,instance records written into backend-visible update data
+touched_partition_count,not applicable,capture needed,capture needed,partitions receiving top-level update work
+global_partition_population,not applicable,capture needed,capture needed,instances currently routed through global partition
+maintained_top_level_region,full TLAS,capture needed,capture needed,full structure versus touched partition set
+tlas_update_time_ms,capture needed,not applicable,capture needed,classic top-level build/update time
+ptlas_update_time_ms,not applicable,capture needed,capture needed,partitioned top-level build/update time
+tlas_memory_mb,capture needed,not applicable,capture needed,classic top-level acceleration structure memory
+ptlas_memory_mb,not applicable,capture needed,capture needed,partitioned top-level acceleration structure memory
+tlas_scratch_mb,capture needed,not applicable,capture needed,classic top-level scratch memory
+ptlas_scratch_mb,not applicable,capture needed,capture needed,partitioned top-level scratch memory
+native_operation_type_count,capture needed,capture needed,capture needed,backend operation type breakdown and operation count

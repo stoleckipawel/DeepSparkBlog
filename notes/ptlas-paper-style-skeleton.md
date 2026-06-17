@@ -49,7 +49,7 @@ Core content:
 - classic TLAS is maintained as one top-level structure over instances
 - PTLAS preserves the top-level traversal role but changes update expression
 - the key distinction is update granularity: broad structure vs changed instances and touched partitions
-- value depends on native submitted work, not only logical planning
+- value depends on backend build/update command scope, not engine-side planning alone
 - the article uses a domino-style workload and one engine integration path to reason about this
 
 Visuals:
@@ -79,7 +79,7 @@ Core content:
 - modern ray-traced scenes often have local motion inside large instance sets
 - classic TLAS rebuild/refit can be valid but broad
 - PTLAS introduces partitions as a way to express narrower top-level work
-- the article asks whether selectivity survives from scene change to native work submission
+- the article asks whether changed-instance and touched-partition counts are reflected in backend build/update commands
 
 Visuals:
 
@@ -157,7 +157,7 @@ Core content:
 - scene changes are often local
 - classic TLAS maintenance is organized around one top-level structure
 - a small dirty set can still become broad top-level work
-- correctness is not the same as update selectivity
+- correctness is not the same as scoped backend update commands
 
 Suggested problem statement:
 
@@ -248,7 +248,7 @@ Exit criteria:
 
 Purpose:
 
-- explain how selective intent becomes backend work
+- explain how changed-instance and touched-partition planning becomes backend work
 - separate CPU policy, CPU/GPU update authoring, and GPU execution
 
 Core content:
@@ -257,7 +257,7 @@ Core content:
 - CPU or GPU can detect changed instances and author sparse write records
 - GPU executes build/update and tracing
 - compute can append changed records into indirect operation buffers
-- native operation packing is the stage where selectivity can survive or collapse
+- native operation packing is the stage where scoped planning can stay scoped or widen again
 
 Visuals:
 
@@ -282,7 +282,7 @@ Core content:
 - logical update stream can represent dirty or moved entries
 - diagnostics expose planner/update state
 - current native operation pack may still collapse into broad full-scene write behavior
-- missing proof: selective native PTLAS work proportional to changed-instance/touched-partition sets
+- missing proof: backend PTLAS commands proportional to changed-instance and touched-partition sets
 
 Visuals:
 
@@ -327,7 +327,7 @@ Core content:
 
 - TLAS remains the baseline top-level instance acceleration model
 - PTLAS changes how top-level maintenance can be expressed
-- the useful metric is not whether PTLAS exists, but whether local scene change becomes local native work
+- the useful metric is not whether PTLAS exists, but whether backend build/update commands follow changed instances and touched partitions
 - success requires changed-instance counts, touched-partition counts, native operation breakdown, and timings
 
 Visuals:
@@ -423,7 +423,7 @@ Direction:
 
 Draft shape:
 
-`This article compares classic TLAS maintenance with PTLAS-style partitioned top-level updates. The focus is update granularity: whether local instance motion can remain local when converted into native acceleration-structure work. The article reviews the classic BLAS/TLAS baseline, summarizes the PTLAS model, and uses a dynamic partitioned workload plus an engine implementation path to discuss what must be measured. The central limitation is that logical selectivity is not enough unless native work submission preserves it.`
+`This article compares classic TLAS maintenance with PTLAS-style partitioned top-level updates. The focus is update granularity: whether local instance motion can remain local when converted into backend acceleration-structure commands. The article reviews the classic BLAS/TLAS baseline, summarizes the PTLAS model, and uses a dynamic partitioned workload plus an engine implementation path to discuss what must be measured. The central limitation is backend command scope: changed-instance and touched-partition counts must be reflected in backend build/update commands issued by the renderer, not only engine-side planning.`
 
 ### 2. Introduction: motivation from scene scale
 
@@ -525,7 +525,7 @@ Direction:
 
 - use the implementation path as the method spine
 - introduce Sparkle path in the method/evidence area, not the abstract
-- focus on where selectivity is authored, packed, and diagnosed
+- focus on where changed-instance and touched-partition scope is authored, packed, and diagnosed
 
 Flow:
 
@@ -545,7 +545,7 @@ Direction:
 
 Emphasis:
 
-- logical selectivity exists
+- engine-side dirty update records exist
 - native operation packing still needs proof or improvement
 
 ### 11. Discussion: tradeoff discussion
@@ -574,7 +574,7 @@ Draft:
 
 - TLAS remains one top-level instance acceleration structure.
 - PTLAS changes how top-level updates can be expressed.
-- The proof is whether local scene change becomes local native work.
+- The proof is whether backend build/update commands follow changed instances and touched partitions.
 
 ### 13. Resources: flat resource list
 
@@ -798,7 +798,7 @@ Exit criteria:
 
 Goal:
 
-- explain where selectivity is created, packed, and submitted
+- explain where changed-instance and touched-partition scope is created, packed, and submitted
 
 Actions:
 
@@ -836,7 +836,7 @@ Use selected direction:
 
 Exit criteria:
 
-- logical selectivity and native work submission are clearly separated
+- engine-side update records and backend build/update command scope are clearly separated
 - limitation is measurable
 
 ### Implementation Pass 10: Discussion

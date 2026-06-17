@@ -1,0 +1,121 @@
+{{/* Focused PTLAS per-frame update model visual. */}}
+<section class="ptlas-update-model" aria-label="PTLAS update model">
+  <div class="ptlas-update-head">
+    <div>
+      <div class="ptlas-update-kicker">Update model</div>
+      <h3>What changes per frame</h3>
+    </div>
+    <p>The frame update should name changed records and the partitions that receive work.</p>
+  </div>
+
+  <div class="ptlas-update-flow" aria-label="Changed instance records to backend update operations">
+    <article class="ptlas-update-node records">
+      <span>Input</span>
+      <h4>Changed instance records</h4>
+      <p>Transforms, metadata, partition index, and BLAS reference for rewritten instances.</p>
+    </article>
+    <div class="ptlas-update-arrow" aria-hidden="true"></div>
+    <article class="ptlas-update-node partitions">
+      <span>Scope</span>
+      <h4>Touched partitions</h4>
+      <p>Local partitions plus global partition population for dynamic movers.</p>
+    </article>
+    <div class="ptlas-update-arrow" aria-hidden="true"></div>
+    <article class="ptlas-update-node backend">
+      <span>Submit</span>
+      <h4>Backend update operations</h4>
+      <p>Native build/update work should match the compact changed set.</p>
+    </article>
+  </div>
+</section>
+
+<style>
+.ptlas-update-model{
+  margin:.8em 0 1.5em;
+  padding:.75em;
+  border:1px solid transparent;
+  border-radius:.75rem;
+  background:rgb(var(--color-neutral-50,245,245,247));
+  color:inherit;
+}
+:is(.dark,.scheme-congo) .ptlas-update-model{background:rgb(var(--color-neutral-800,18,18,22))}
+.ptlas-update-head{
+  display:grid;
+  grid-template-columns:minmax(14rem,.52fr) minmax(18rem,1fr);
+  gap:.75em;
+  align-items:end;
+  margin-bottom:.75em;
+}
+.ptlas-update-kicker{
+  color:var(--ds-warn-light);
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.68em;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.ptlas-update-model h3{
+  margin:.15em 0 0;
+  font-size:1.02em;
+  line-height:1.25;
+}
+.ptlas-update-head p{
+  margin:0;
+  opacity:.66;
+  font-size:.86em;
+  line-height:1.5;
+}
+.ptlas-update-flow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);
+  gap:.55em;
+  align-items:stretch;
+}
+.ptlas-update-node{
+  border:1px solid color-mix(in srgb,currentColor 10%,transparent);
+  border-radius:.55rem;
+  background:rgba(var(--ds-info-rgb),.035);
+  padding:.72em .8em;
+}
+:is(.dark,.scheme-congo) .ptlas-update-node{background:rgb(var(--color-neutral-900,11,11,14))}
+.ptlas-update-node.records{border-top:2px solid var(--ds-info)}
+.ptlas-update-node.partitions{border-top:2px solid var(--ds-danger)}
+.ptlas-update-node.backend{
+  border-top:2px solid var(--ds-warn);
+  box-shadow:inset 0 0 0 1px rgba(var(--ds-warn-rgb),.12);
+}
+.ptlas-update-node span{
+  opacity:.56;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.68em;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.ptlas-update-node h4{
+  margin:.28em 0 .35em;
+  font-size:.88em;
+}
+.ptlas-update-node p{
+  margin:0;
+  opacity:.68;
+  font-size:.78em;
+  line-height:1.45;
+}
+.ptlas-update-arrow{
+  align-self:center;
+  width:1.1em;
+  height:1.1em;
+  border-right:2px solid color-mix(in srgb,currentColor 32%,transparent);
+  border-bottom:2px solid color-mix(in srgb,currentColor 32%,transparent);
+  transform:rotate(-45deg);
+}
+@media (max-width: 900px){
+  .ptlas-update-head{grid-template-columns:1fr}
+  .ptlas-update-flow{grid-template-columns:1fr}
+  .ptlas-update-arrow{
+    justify-self:center;
+    transform:rotate(45deg);
+  }
+}
+</style>

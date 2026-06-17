@@ -14,8 +14,8 @@
       <h4>Rebuild TLAS</h4>
       <p>Build the top-level structure again from the current instance set.</p>
       <ul>
-        <li>fresh structure quality</li>
-        <li>handles broad membership changes cleanly</li>
+        <li>broad membership or layout change</li>
+        <li>checkpoint after accumulated refit drift</li>
         <li>more top-level build work</li>
       </ul>
     </article>
@@ -25,9 +25,9 @@
       <h4>Update / refit TLAS</h4>
       <p>Reuse the previous structure and update changed instance bounds or transforms.</p>
       <ul>
-        <li>can be cheaper for transform-only motion</li>
+        <li>transform-only movement</li>
+        <li>reuse previous top-level structure work</li>
         <li>requires update-compatible build setup</li>
-        <li>can lose traversal quality over time</li>
       </ul>
     </article>
   </div>
