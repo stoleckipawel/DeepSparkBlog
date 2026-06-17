@@ -72,15 +72,15 @@
             <rect x="601" y="112" width="31" height="34" />
             <rect x="632" y="112" width="54" height="34" />
           </g>
-          <text x="380" y="134" text-anchor="middle">TLAS instance-index pool</text>
+          <text x="380" y="134" text-anchor="middle">instance-index pool</text>
         </g>
 
         <g class="ptlas-partition-row">
           <rect x="76" y="206" width="170" height="42" rx="2" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
           <rect x="294" y="206" width="154" height="42" rx="2" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
           <rect x="496" y="206" width="172" height="42" rx="2" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
-          <text x="161" y="232" text-anchor="middle">TLAS partition</text>
-          <text x="371" y="232" text-anchor="middle">partition</text>
+          <text x="161" y="232" text-anchor="middle">partition A</text>
+          <text x="371" y="232" text-anchor="middle">partition B</text>
           <text x="582" y="232" text-anchor="middle">global partition</text>
         </g>
 
@@ -92,31 +92,28 @@
 
         <g class="ptlas-inputs">
           <rect x="236" y="398" width="288" height="30" rx="2" class="ptlas-op-box" />
-          <rect x="112" y="440" width="536" height="24" rx="2" class="ptlas-input-box" />
+          <rect x="128" y="440" width="504" height="24" rx="2" class="ptlas-input-box" />
           <text x="380" y="418" text-anchor="middle">indirect build operations</text>
-          <text x="380" y="457" text-anchor="middle">instance definitions: partition index + BLAS reference</text>
+          <text x="380" y="457" text-anchor="middle">instance definitions</text>
         </g>
 
-        <g class="ptlas-arrows" fill="none" stroke-width="2" marker-end="url(#ptlasArrow)">
-          <path d="M120,58 C120,86 92,84 92,112" />
-          <path d="M329,58 C329,88 329,84 329,112" />
-          <path d="M565,58 C565,86 590,84 590,112" />
+        <g class="ptlas-arrows ptlas-main-arrows" fill="none" stroke-width="2" marker-end="url(#ptlasArrow)">
+          <path d="M120,58 C120,88 118,88 118,112" />
+          <path d="M329,58 C329,88 329,88 329,112" />
+          <path d="M565,58 C565,88 565,88 565,112" />
 
-          <path d="M128,146 C128,176 130,176 161,206" />
-          <path d="M216,146 C216,176 208,176 161,206" />
-          <path d="M338,146 C338,174 350,176 371,206" />
-          <path d="M510,146 C510,174 538,176 582,206" />
-          <path d="M624,146 C624,176 622,176 582,206" />
+          <path d="M170,146 C170,176 170,178 170,206" />
+          <path d="M372,146 C372,176 372,178 372,206" />
+          <path d="M582,146 C582,176 582,178 582,206" />
 
-          <path d="M161,248 C161,280 238,286 306,304" />
-          <path d="M371,248 C371,280 371,280 371,304" />
-          <path d="M582,248 C582,280 508,286 438,304" />
+          <path d="M161,248 C161,282 270,286 318,304" />
+          <path d="M371,248 C371,282 371,284 371,304" />
+          <path d="M582,248 C582,282 476,286 424,304" />
         </g>
 
-        <g class="ptlas-reuse-arrows" fill="none" stroke-width="2" marker-end="url(#ptlasArrow)">
-          <path d="M162,206 C116,184 86,178 74,146" />
-          <path d="M372,206 C364,174 386,166 422,146" />
-          <path d="M582,206 C632,178 646,160 636,146" />
+        <g class="ptlas-reuse-arrows" fill="none" stroke-width="1.5" marker-end="url(#ptlasArrow)">
+          <path d="M164,206 C112,188 98,176 90,146" />
+          <path d="M582,206 C640,188 650,176 654,146" />
         </g>
 
         <g class="ptlas-build-arrow" fill="none" stroke-width="2.6" marker-end="url(#ptlasGreenArrow)">
@@ -125,9 +122,12 @@
         </g>
 
         <g class="ptlas-annotations">
-          <text x="600" y="86" class="ptlas-note">reuse BLAS</text>
-          <text x="596" y="176" class="ptlas-note">no reuse of indices</text>
-          <text x="598" y="286" class="ptlas-note">no reuse of partitions</text>
+          <rect x="546" y="78" width="132" height="22" rx="11" class="ptlas-note-chip" />
+          <rect x="516" y="160" width="174" height="22" rx="11" class="ptlas-note-chip" />
+          <rect x="510" y="266" width="182" height="22" rx="11" class="ptlas-note-chip" />
+          <text x="612" y="94" class="ptlas-note" text-anchor="middle">reuse BLAS</text>
+          <text x="603" y="176" class="ptlas-note" text-anchor="middle">rewrite changed indices</text>
+          <text x="601" y="282" class="ptlas-note" text-anchor="middle">rewrite touched partitions</text>
         </g>
       </svg>
     </div>
@@ -205,8 +205,8 @@
   fill:currentColor;
 }
 .ptlas-structure-diagram .ptlas-note{
-  font-size:14px;
-  opacity:.6;
+  font-size:12px;
+  opacity:.72;
 }
 .ptlas-structure-diagram .ptlas-wordmark{
   font-size:22px;
@@ -238,6 +238,18 @@
 .ptlas-structure-diagram .ptlas-arrows{
   stroke:rgb(var(--color-neutral-400,120,120,130));
   opacity:.85;
+}
+.ptlas-structure-diagram .ptlas-reuse-arrows{
+  stroke:rgb(var(--color-neutral-400,120,120,130));
+  opacity:.48;
+  stroke-dasharray:4 4;
+}
+.ptlas-structure-diagram .ptlas-note-chip{
+  fill:rgba(var(--color-neutral-900,11,11,14),.72);
+  stroke:color-mix(in srgb,currentColor 10%,transparent);
+}
+:is(.dark,.scheme-congo) .ptlas-structure-diagram .ptlas-note-chip{
+  fill:rgba(var(--color-neutral-800,18,18,22),.82);
 }
 @media (max-width: 980px){
   .ptlas-structure-grid{grid-template-columns:1fr}
