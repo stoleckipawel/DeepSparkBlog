@@ -13,17 +13,20 @@
         PTLAS keeps the scene-level role of TLAS, but the top level is maintained through partitions.
       </p>
       <ul>
-        <li>Instances reference existing BLAS objects.</li>
-        <li>Instances are assigned to partitions.</li>
-        <li>Local changes should produce local top-level work.</li>
+        <li>BLAS objects can be reused across updates.</li>
+        <li>Instance indices and partitions are separate update targets.</li>
+        <li>Indirect operations describe which records change.</li>
       </ul>
     </div>
 
     <div class="ptlas-structure-diagram" aria-hidden="true">
-      <svg viewBox="0 0 760 420" role="img">
+      <svg viewBox="0 0 760 470" role="img">
         <defs>
           <marker id="ptlasArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
             <path d="M0,0 L8,3 L0,6 Z" fill="rgb(var(--color-neutral-400,120,120,130))" />
+          </marker>
+          <marker id="ptlasGreenArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,3 L0,6 Z" fill="var(--ds-success)" />
           </marker>
           <linearGradient id="ptlasBlue" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="rgba(var(--ds-info-rgb),.28)" />
@@ -35,66 +38,96 @@
           </linearGradient>
         </defs>
 
-        <rect x="42" y="26" width="676" height="344" rx="10" class="ptlas-diagram-shell" stroke-dasharray="4 5" />
+        <rect x="42" y="72" width="676" height="312" rx="10" class="ptlas-diagram-shell" stroke-dasharray="4 5" />
 
         <g class="ptlas-blas-row">
-          <rect x="88" y="50" width="142" height="44" rx="3" class="ptlas-blas-box" fill="url(#ptlasPeach)" />
-          <rect x="310" y="50" width="142" height="44" rx="3" class="ptlas-blas-box" fill="url(#ptlasPeach)" />
-          <rect x="532" y="50" width="142" height="44" rx="3" class="ptlas-blas-box" fill="url(#ptlasPeach)" />
-          <text x="159" y="78" text-anchor="middle">Geometry BLAS</text>
-          <text x="381" y="78" text-anchor="middle">Geometry BLAS</text>
-          <text x="603" y="78" text-anchor="middle">Geometry BLAS</text>
-          <text x="606" y="124" class="ptlas-note">BLAS references are reused</text>
+          <rect x="74" y="24" width="92" height="34" rx="2" class="ptlas-blas-box" fill="url(#ptlasPeach)" />
+          <rect x="268" y="24" width="122" height="34" rx="2" class="ptlas-blas-box" fill="url(#ptlasPeach)" />
+          <rect x="494" y="24" width="142" height="34" rx="2" class="ptlas-blas-box" fill="url(#ptlasPeach)" />
+          <text x="120" y="46" text-anchor="middle">BLAS</text>
+          <text x="329" y="46" text-anchor="middle">BLAS</text>
+          <text x="565" y="46" text-anchor="middle">BLAS</text>
         </g>
 
         <g class="ptlas-instance-row">
-          <rect x="100" y="150" width="560" height="38" rx="3" class="ptlas-instance-pool" />
+          <rect x="74" y="112" width="612" height="34" rx="2" class="ptlas-instance-pool" />
           <g class="ptlas-instance-cells">
-            <rect x="100" y="150" width="34" height="38" />
-            <rect x="134" y="150" width="34" height="38" />
-            <rect x="168" y="150" width="34" height="38" />
-            <rect x="202" y="150" width="34" height="38" />
-            <rect x="236" y="150" width="34" height="38" />
-            <rect x="270" y="150" width="34" height="38" />
-            <rect x="304" y="150" width="34" height="38" />
-            <rect x="338" y="150" width="34" height="38" />
-            <rect x="372" y="150" width="34" height="38" />
-            <rect x="406" y="150" width="34" height="38" />
-            <rect x="440" y="150" width="34" height="38" />
-            <rect x="474" y="150" width="34" height="38" />
-            <rect x="508" y="150" width="34" height="38" />
-            <rect x="542" y="150" width="34" height="38" />
-            <rect x="576" y="150" width="34" height="38" />
-            <rect x="610" y="150" width="50" height="38" />
+            <rect x="74" y="112" width="31" height="34" />
+            <rect x="105" y="112" width="31" height="34" />
+            <rect x="136" y="112" width="31" height="34" />
+            <rect x="167" y="112" width="31" height="34" />
+            <rect x="198" y="112" width="31" height="34" />
+            <rect x="229" y="112" width="31" height="34" />
+            <rect x="260" y="112" width="31" height="34" />
+            <rect x="291" y="112" width="31" height="34" />
+            <rect x="322" y="112" width="31" height="34" />
+            <rect x="353" y="112" width="31" height="34" />
+            <rect x="384" y="112" width="31" height="34" />
+            <rect x="415" y="112" width="31" height="34" />
+            <rect x="446" y="112" width="31" height="34" />
+            <rect x="477" y="112" width="31" height="34" />
+            <rect x="508" y="112" width="31" height="34" />
+            <rect x="539" y="112" width="31" height="34" />
+            <rect x="570" y="112" width="31" height="34" />
+            <rect x="601" y="112" width="31" height="34" />
+            <rect x="632" y="112" width="54" height="34" />
           </g>
-          <text x="380" y="174" text-anchor="middle">instance records: transform + partition index + BLAS reference</text>
+          <text x="380" y="134" text-anchor="middle">TLAS instance-index pool</text>
         </g>
 
         <g class="ptlas-partition-row">
-          <rect x="100" y="244" width="170" height="48" rx="3" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
-          <rect x="302" y="244" width="154" height="48" rx="3" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
-          <rect x="488" y="244" width="172" height="48" rx="3" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
-          <text x="185" y="274" text-anchor="middle">partition A</text>
-          <text x="379" y="274" text-anchor="middle">partition B</text>
-          <text x="574" y="274" text-anchor="middle">global partition</text>
+          <rect x="76" y="206" width="170" height="42" rx="2" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
+          <rect x="294" y="206" width="154" height="42" rx="2" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
+          <rect x="496" y="206" width="172" height="42" rx="2" class="ptlas-partition-box" fill="url(#ptlasBlue)" />
+          <text x="161" y="232" text-anchor="middle">TLAS partition</text>
+          <text x="371" y="232" text-anchor="middle">partition</text>
+          <text x="582" y="232" text-anchor="middle">global partition</text>
         </g>
 
         <g class="ptlas-top">
-          <rect x="100" y="334" width="560" height="46" rx="3" class="ptlas-top-rect" />
-          <text x="380" y="363" text-anchor="middle">Top Level Acceleration Structure</text>
-          <text x="620" y="408" class="ptlas-wordmark">PTLAS</text>
+          <rect x="76" y="304" width="592" height="42" rx="2" class="ptlas-top-rect" />
+          <text x="372" y="330" text-anchor="middle">Top Level Acceleration Structure (TLAS)</text>
+          <text x="620" y="378" class="ptlas-wordmark">PTLAS</text>
+        </g>
+
+        <g class="ptlas-inputs">
+          <rect x="236" y="398" width="288" height="30" rx="2" class="ptlas-op-box" />
+          <rect x="112" y="440" width="536" height="24" rx="2" class="ptlas-input-box" />
+          <text x="380" y="418" text-anchor="middle">indirect build operations</text>
+          <text x="380" y="457" text-anchor="middle">instance definitions: partition index + BLAS reference</text>
         </g>
 
         <g class="ptlas-arrows" fill="none" stroke-width="2" marker-end="url(#ptlasArrow)">
-          <path d="M159,94 C159,124 152,124 152,150" />
-          <path d="M381,94 C381,124 380,124 380,150" />
-          <path d="M603,94 C603,124 608,124 608,150" />
-          <path d="M185,188 C185,220 185,220 185,244" />
-          <path d="M379,188 C379,220 379,220 379,244" />
-          <path d="M574,188 C574,220 574,220 574,244" />
-          <path d="M185,292 C185,318 238,320 290,334" />
-          <path d="M379,292 C379,318 379,318 379,334" />
-          <path d="M574,292 C574,318 522,320 470,334" />
+          <path d="M120,58 C120,86 92,84 92,112" />
+          <path d="M329,58 C329,88 329,84 329,112" />
+          <path d="M565,58 C565,86 590,84 590,112" />
+
+          <path d="M128,146 C128,176 130,176 161,206" />
+          <path d="M216,146 C216,176 208,176 161,206" />
+          <path d="M338,146 C338,174 350,176 371,206" />
+          <path d="M510,146 C510,174 538,176 582,206" />
+          <path d="M624,146 C624,176 622,176 582,206" />
+
+          <path d="M161,248 C161,280 238,286 306,304" />
+          <path d="M371,248 C371,280 371,280 371,304" />
+          <path d="M582,248 C582,280 508,286 438,304" />
+        </g>
+
+        <g class="ptlas-reuse-arrows" fill="none" stroke-width="2" marker-end="url(#ptlasArrow)">
+          <path d="M162,206 C116,184 86,178 74,146" />
+          <path d="M372,206 C364,174 386,166 422,146" />
+          <path d="M582,206 C632,178 646,160 636,146" />
+        </g>
+
+        <g class="ptlas-build-arrow" fill="none" stroke-width="2.6" marker-end="url(#ptlasGreenArrow)">
+          <path d="M380,440 L380,428" />
+          <path d="M380,398 C380,378 380,366 380,346" />
+        </g>
+
+        <g class="ptlas-annotations">
+          <text x="600" y="86" class="ptlas-note">reuse BLAS</text>
+          <text x="596" y="176" class="ptlas-note">no reuse of indices</text>
+          <text x="598" y="286" class="ptlas-note">no reuse of partitions</text>
         </g>
       </svg>
     </div>

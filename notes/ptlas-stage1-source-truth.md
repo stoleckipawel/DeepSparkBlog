@@ -112,7 +112,32 @@ What we should use it for:
 - concise vendor framing
 - practical narrative support for the sample
 
-### 2.6 NVIDIA NVAPI D3D12 PTLAS docs
+### 2.6 NVIDIA RTX innovations / Witcher foliage context
+
+Source:
+
+- https://developer.nvidia.com/blog/nvidia-rtx-innovations-are-powering-the-next-era-of-game-development/
+
+What it gives us:
+
+- a 2026 NVIDIA framing of RTX Mega Geometry foliage
+- explicit mention that the foliage system uses partitioned top-level acceleration structures
+- production-facing motivation: dense path-traced environments with many detailed, uniquely animated foliage elements
+- CD PROJEKT RED / Witcher context for why PTLAS matters to real game content
+
+What we should use it for:
+
+- motivation and context only
+- explaining why PTLAS is relevant beyond a synthetic domino sample
+- a short Resources link, not a main technical proof source
+
+Do not use it for:
+
+- Vulkan operation semantics
+- D3D12 / NVAPI structure details
+- performance claims about PTLAS by itself
+
+### 2.7 NVIDIA NVAPI D3D12 PTLAS docs
 
 Source:
 
@@ -136,7 +161,7 @@ What we should use it for:
 - explaining sizing policy implications
 - explaining why layout choices matter
 
-### 2.7 Microsoft DirectX ray tracing functional spec
+### 2.8 Microsoft DirectX ray tracing functional spec
 
 Source:
 
