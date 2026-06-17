@@ -331,9 +331,15 @@ Stage 5 reader-focus guardrails:
 
 - SparkleEngine is evidence, not the protagonist
 - avoid phrases such as `already has a real`, `well past exploring`, `many right pieces`, or anything that sounds like feature boasting
+- avoid throat-clearing such as `this article follows`, `to keep this concrete`, or `the useful question is`
 - prefer `implementation example`, `local proof anchor`, `current path`, and `observable gap`
 - keep a Sparkle reference only if it explains TLAS/PTLAS behavior, supports a concrete claim, or makes a limitation visible
 - remove any sentence whose main effect is to praise the engine rather than help the reader understand PTLAS
+- remove any sentence whose main effect is to describe article intent rather than teach a TLAS/PTLAS concept
+- do not ask readers to care about SparkleEngine by name; show behavior, evidence, and tradeoffs
+- do not enumerate implementation files in the live article as proof
+- use diagrams, checkpoint tables, metrics, captures, or specific line citations instead of raw source-file lists
+- keep source referrals out of the teaching flow; put reference links in a compact `Resources` section unless an inline link is essential to understand the sentence
 
 Stage 5 working document:
 
@@ -519,7 +525,8 @@ What this section must include:
 
 Best evidence:
 
-- code references
+- checkpoint table or diagram
+- specific code references only when tied to a claim
 - one small architecture diagram
 - screenshot or table proving diagnostics exist
 

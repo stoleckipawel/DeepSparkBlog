@@ -399,13 +399,13 @@ At this point the useful question is not whether PTLAS-shaped systems exist in t
 
 #### Section development notes
 
-This is where the article should introduce the implementation shape:
+This is where the article should introduce the implementation shape through concepts, not raw file enumeration:
 
-- `RayTracingTopLevelScenePlanner::PlanFrame`
-- `RayTracingPtlasPartitionPlanner`
-- `RayTracingPtlasLogicalUpdateStream`
-- `RayTracingPartitionedTlasStrategy`
-- backend PTLAS services
+- frame planning
+- partition planning
+- logical update streaming
+- native operation packing
+- backend PTLAS execution
 - smoke metadata and overlay diagnostics
 
 Recommended subsection flow:
@@ -424,6 +424,7 @@ At this point the article should have earned the right to ask the hard question:
 #### Planned evidence
 
 - Figure 3 `Implementation PTLAS architecture`
+- checkpoint/evidence table that explains what each stage proves
 - E06 `Top-level mode partitioned`
 - E08 `Provider status D3D12`
 - E09 `Provider status Vulkan`
@@ -432,14 +433,10 @@ At this point the article should have earned the right to ask the hard question:
 
 #### Planned code/source support
 
-- `SparkleEngine/Engine/Renderer/Private/RayTracing/RayTracingTopLevelScenePlanner.cpp`
-- `SparkleEngine/Engine/Renderer/Private/RayTracing/RayTracingPtlasPartitionPlanner.cpp`
-- `SparkleEngine/Engine/Renderer/Private/RayTracing/RayTracingPtlasLogicalUpdateStream.cpp`
-- `SparkleEngine/Engine/Renderer/Private/RayTracing/RayTracingPartitionedTlasStrategy.cpp`
-- `SparkleEngine/Engine/RHI/Private/D3D12/RayTracing/D3D12NvapiRayTracingProvider.cpp`
-- `SparkleEngine/Engine/RHI/Private/Vulkan/RayTracing/VulkanPartitionedTlasServices.cpp`
-- `SparkleEngine/Engine/Application/Private/Validation/RhiSmokeCaptureArtifacts.cpp`
-- `SparkleEngine/Engine/Editor/Private/Panels/ViewportRayTracingDebugOverlay.cpp`
+- keep exact file paths in notes and source-truth documents
+- in the live article, cite filenames only when a specific line proves a specific claim
+- never enumerate source files as a standalone article block
+- prefer checkpoint, evidence, metric, or diagram form
 
 #### Planned metrics
 

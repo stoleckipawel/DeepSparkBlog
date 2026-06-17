@@ -4,7 +4,7 @@
     <div class="ptlas-field-intro">
       <div class="ptlas-field-kicker">Partition locality</div>
       <strong>Only the moving region should become hot</strong>
-      <span>Step through the board, the moving wave, and the partitions touched this frame.</span>
+      <span>The board stays partitioned, but only the cells around the moving instances are updated this frame.</span>
     </div>
 
     <div class="ptlas-field-stage">
@@ -12,14 +12,14 @@
     </div>
 
     <div class="widget-info ptlas-field-caption" id="ptlas-field-caption">
-      Muted cells show ownership. Bright cells show the update region.
+      Saturated cells are the PTLAS update region.
     </div>
 
     <div class="widget-toolbar">
-      <div class="widget-toolbar-left" role="tablist" aria-label="PTLAS visual steps">
-        <button class="widget-pill ptlas-field-step ptlas-field-step-active" type="button" data-mode="0">Partitioned board</button>
-        <button class="widget-pill ptlas-field-step" type="button" data-mode="1">Toppling wave</button>
-        <button class="widget-pill ptlas-field-step" type="button" data-mode="2">PTLAS update</button>
+      <div class="widget-toolbar-left">
+        <span class="ptlas-field-legend muted">partition ownership</span>
+        <span class="ptlas-field-legend moving">moving instances</span>
+        <span class="ptlas-field-legend hot">updated partitions</span>
       </div>
       <div class="widget-toolbar-right">
         <button class="widget-pill ptlas-field-replay" type="button">Replay wave</button>
@@ -56,15 +56,26 @@
   font-size:.84em;
   line-height:1.5;
 }
-.ptlas-field-step-active{
-  color:var(--ds-info)!important;
-  border-color:var(--ds-info)!important;
-  font-weight:700!important;
+.ptlas-field-legend{
+  display:inline-flex;
+  align-items:center;
+  gap:.4em;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.72em;
+  opacity:.66;
 }
-.ptlas-field-step[data-mode="2"].ptlas-field-step-active{
-  color:var(--ds-danger)!important;
-  border-color:var(--ds-danger)!important;
+.ptlas-field-legend::before{
+  content:"";
+  width:.65em;
+  height:.65em;
+  border-radius:2px;
+  border:1px solid currentColor;
 }
+.ptlas-field-legend.muted::before{background:rgba(var(--ds-info-rgb),.12)}
+.ptlas-field-legend.moving{color:var(--ds-info-light)}
+.ptlas-field-legend.moving::before{background:rgba(var(--ds-info-rgb),.4)}
+.ptlas-field-legend.hot{color:var(--ds-danger)}
+.ptlas-field-legend.hot::before{background:rgba(var(--ds-danger-rgb),.55)}
 .ptlas-field-stage{
   position:relative;
   overflow:hidden;
@@ -95,7 +106,7 @@
   const ctx = canvas.getContext("2d");
   const cols = 24;
   const rows = 16;
-  let mode = 0;
+  const mode = 2;
   let startedAt = performance.now();
   let raf = 0;
   const styles = getComputedStyle(root);
@@ -106,12 +117,6 @@
   const danger = `rgb(${dangerRgb})`;
   const neutral100Rgb = cssVar("--color-neutral-100", "230,230,234");
   const neutral300Rgb = cssVar("--color-neutral-300", "161,161,170");
-
-  const captions = [
-    "Muted cells show partition ownership.",
-    "The bright band is local motion.",
-    "Saturated cells are the PTLAS update region."
-  ];
 
   const tileColors = [];
   for(let y=0;y<rows;y++){
@@ -159,7 +164,6 @@
   }
 
   function hotCells(t){
-    if(mode !== 2) return new Map();
     const center = waveCenter(t);
     const map = new Map();
     for(let y=0;y<rows;y++){
@@ -204,7 +208,7 @@
         const p3 = project(x,y+1);
         const color = tileColors[y*cols+x];
         const heat = hot.get(`${x},${y}`) || 0;
-        const baseAlpha = mode === 0 ? .82 : .72;
+        const baseAlpha = .72;
         let fill = `hsla(${color.h},${color.s}%,${color.l}%,${baseAlpha})`;
         let stroke = "rgba(213,231,244,.14)";
         let width = 1;
@@ -271,23 +275,23 @@
       if(i === 0) ctx.moveTo(p[0], p[1]);
       else ctx.lineTo(p[0], p[1]);
     });
-    ctx.strokeStyle = path.active && mode > 0 ? `rgba(${infoRgb},.72)` : "rgba(8,13,19,.62)";
-    ctx.lineWidth = path.active && mode > 0 ? 2.1 : 1.45;
+    ctx.strokeStyle = path.active ? `rgba(${infoRgb},.72)` : "rgba(8,13,19,.62)";
+    ctx.lineWidth = path.active ? 2.1 : 1.45;
     ctx.stroke();
 
     for(let i=0;i<samples;i+=2){
       const k = i / (samples - 1);
       const current = points[i];
       const next = points[Math.min(samples - 1, i + 1)];
-      const active = path.active && mode > 0 && Math.abs(k - t) < .105;
+      const active = path.active && Math.abs(k - t) < .105;
       const angle = Math.atan2(next[1]-current[1], next[0]-current[0]) + Math.PI / 2;
       const dominoLength = active ? 13 : 9;
       const dominoWidth = active ? 3.2 : 2.1;
       ctx.save();
       ctx.translate(current[0], current[1]);
       ctx.rotate(angle + (active ? Math.sin(performance.now()/130 + i) * .65 : 0));
-      ctx.fillStyle = active ? (mode === 2 ? danger : info) : "rgba(5,9,14,.76)";
-      ctx.shadowColor = active ? (mode === 2 ? `rgba(${dangerRgb},.48)` : `rgba(${infoRgb},.42)`) : "transparent";
+      ctx.fillStyle = active ? danger : "rgba(5,9,14,.76)";
+      ctx.shadowColor = active ? `rgba(${dangerRgb},.48)` : "transparent";
       ctx.shadowBlur = active ? 8 : 0;
       ctx.fillRect(-dominoWidth/2, -dominoLength/2, dominoWidth, dominoLength);
       ctx.restore();
@@ -295,16 +299,15 @@
   }
 
   function drawMovers(t){
-    if(mode === 0) return;
     const center = waveCenter(t);
     for(let i=0;i<22;i++){
       const jitterX = Math.sin(i * 1.7) * .35;
       const jitterY = Math.cos(i * 1.1) * .45;
       const p = project(center.x + jitterX, center.y + jitterY, 18 + Math.sin(i + t*10) * 4);
       ctx.beginPath();
-      ctx.arc(p[0], p[1], mode === 2 ? 5.2 : 4.7, 0, Math.PI * 2);
-      ctx.fillStyle = mode === 2 ? danger : info;
-      ctx.shadowColor = mode === 2 ? `rgba(${dangerRgb},.52)` : `rgba(${infoRgb},.46)`;
+      ctx.arc(p[0], p[1], 5.2, 0, Math.PI * 2);
+      ctx.fillStyle = danger;
+      ctx.shadowColor = `rgba(${dangerRgb},.52)`;
       ctx.shadowBlur = 12;
       ctx.fill();
       ctx.shadowBlur = 0;
@@ -315,19 +318,14 @@
   }
 
   function drawAnnotations(t){
-    if(mode === 0) return;
     const center = project(waveCenter(t).x, waveCenter(t).y, 30);
     ctx.beginPath();
-    ctx.arc(center[0], center[1], mode === 2 ? 62 : 38, 0, Math.PI * 2);
-    ctx.strokeStyle = mode === 2 ? `rgba(${dangerRgb},.62)` : `rgba(${infoRgb},.58)`;
-    ctx.lineWidth = mode === 2 ? 3 : 2.4;
+    ctx.arc(center[0], center[1], 62, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${dangerRgb},.62)`;
+    ctx.lineWidth = 3;
     ctx.setLineDash([10, 10]);
     ctx.stroke();
     ctx.setLineDash([]);
-  }
-
-  function renderCaption(){
-    document.getElementById("ptlas-field-caption").textContent = captions[mode];
   }
 
   function render(now){
@@ -337,30 +335,20 @@
     paths.forEach(path => drawPath(path, t));
     drawMovers(t);
     drawAnnotations(t);
-    renderCaption();
     raf = requestAnimationFrame(render);
   }
 
-  function setMode(nextMode){
-    mode = nextMode;
+  function replay(){
     startedAt = performance.now();
-    root.querySelectorAll(".ptlas-field-step").forEach(button => {
-      button.classList.toggle("ptlas-field-step-active", Number(button.dataset.mode) === mode);
-    });
   }
 
-  root.querySelectorAll(".ptlas-field-step").forEach(button => {
-    button.addEventListener("click", () => setMode(Number(button.dataset.mode)));
-  });
-  root.querySelector(".ptlas-field-replay").addEventListener("click", () => {
-    startedAt = performance.now();
-  });
+  root.querySelector(".ptlas-field-replay").addEventListener("click", replay);
 
   const observer = new IntersectionObserver(entries => {
     if(entries[0].isIntersecting){
       observer.disconnect();
       cancelAnimationFrame(raf);
-      setMode(0);
+      replay();
       raf = requestAnimationFrame(render);
     }
   }, {rootMargin:"200px"});

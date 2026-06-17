@@ -214,15 +214,15 @@ For this article, at least one major Sparkle visual should aim for this exact fe
 - visible object motion or movement trail
 - enough contrast that a reader can say "only this area is hot" in one glance
 
-### 5.3 Live interactive visual rule
+### 5.3 Live partition-locality visual rule
 
-The first interactive PTLAS visual must be understandable before the reader knows the API details.
+The first PTLAS locality visual must be understandable before the reader knows the API details.
 
-Required reading order:
+Required visible state:
 
-1. show the large partitioned board first
-2. show the local moving/toppling set second
-3. show the saturated PTLAS update cells last
+- large partitioned board
+- local moving/toppling set
+- saturated PTLAS update cells
 
 Avoid:
 
@@ -231,21 +231,22 @@ Avoid:
 - excessive sky or empty canvas space
 - metric cards that clip or become the main thing the reader notices
 - labels that require the reader to already understand PTLAS terminology
+- extra step controls when one strong state teaches the point better
 
 Preferred widget behavior:
 
-- use numbered step buttons with action-oriented labels
 - make the board fill most of the frame
 - keep domino paths visible even when no update is active
 - use bright moving-instance markers during playback
 - use saturated magenta or similarly unmistakable color only for updated partitions
 - include a short caption that says exactly what the current state proves
+- keep only replay control unless another interaction teaches a distinct behavior
 
 Current live article implementation:
 
 - `layouts/shortcodes/interactive-ptlas-domino-field.html`
 - article placement: immediately after `Read The Picture First`
-- purpose: make the NVIDIA-style "broad world, local update" model obvious before the article enters Sparkle-specific architecture
+- purpose: make the NVIDIA-style "broad world, local update" model obvious before the article enters implementation architecture
 
 ### 5.4 Domino Sample Policy Tradeoff
 
