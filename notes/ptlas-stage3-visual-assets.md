@@ -282,6 +282,47 @@ Narration line:
 
 `local partition update = slower updates, cleaner tracing; global partition = faster updates, less spatial coherence; hybrid chooses where that tradeoff changes`
 
+Additional sample behavior to mention outside the main cards:
+
+- `Mark all dominoes dynamic in partition` is an aggressive global-partition variant
+- when one domino in a partition topples, the whole partition's domino set can be routed through global
+- this can reduce local partition rewrites
+- it can also grow the global partition beyond the truly moving set
+
+### 5.5 NVIDIA Domino Demo Evidence Block
+
+The article should not treat the NVIDIA demo as only a reference image.
+It should be used as a compact evidence block that teaches the full sample loop.
+
+Required article facts:
+
+- about 170k dynamic dominoes
+- about 1.2M static board objects
+- uniform 2D partition grid
+- saturated ground cells are partitions updated by the moving wave
+- domino colors show partition ownership
+- PTLAS Active switches the sample to partitioned top-level maintenance
+- the UI exposes updated-instance count plus TLAS/PTLAS memory and scratch sizes
+- the profiler separates physics, sparse instance-update generation, and top-level update work
+
+Source-level behavior to explain:
+
+- physics compute updates domino state and marks partition timestamps
+- policy chooses local partition update or global partition movement
+- moving to or from global marks source and destination partition index lists for rewrite
+- instance-update compute atomically increments the PTLAS write-instance operation argument count
+- each changed domino writes one updated PTLAS instance record
+- the host submits `vkCmdBuildPartitionedAccelerationStructuresNV` with device-side operation buffers
+
+Reader question answered:
+
+`How does a visible moving wave become a sparse PTLAS update instead of a broad TLAS-style update?`
+
+Placement:
+
+- after the PTLAS structure overview
+- before CPU/GPU responsibility split or immediately before the sparse-work pipeline
+
 ## 6. Deliverable 1: BLAS / TLAS / PTLAS Comparison Table
 
 ### Purpose

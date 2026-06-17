@@ -43,6 +43,10 @@
   <p class="ptlas-policy-line">
     Local partition update = slower updates, cleaner tracing. Global partition = faster updates, less spatial coherence. Hybrid chooses where that tradeoff changes.
   </p>
+
+  <p class="ptlas-policy-note">
+    Aggressive global mode can move every domino from a touched partition into global. That reduces local partition rewrites, but the global partition can grow beyond the truly moving set.
+  </p>
 </section>
 
 <style>
@@ -139,6 +143,16 @@
   opacity:.68;
   font-size:.83em;
   line-height:1.5;
+}
+.ptlas-policy-note{
+  margin:.45em 0 0;
+  padding:.55em .65em;
+  border:1px solid color-mix(in srgb,var(--ds-warn-light) 32%,transparent);
+  border-radius:.45rem;
+  background:color-mix(in srgb,var(--ds-warn-light) 8%,transparent);
+  opacity:.78;
+  font-size:.78em;
+  line-height:1.45;
 }
 @media (max-width: 900px){
   .ptlas-policy-head{grid-template-columns:1fr}

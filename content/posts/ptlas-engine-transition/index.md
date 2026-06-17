@@ -46,15 +46,38 @@ Instances still reference BLAS objects. Rays still enter a top-level structure. 
 
 {{< ptlas-structure-slide >}}
 
-## The Behavior We Want To See
+## The NVIDIA Domino Demo In One Frame
 
-Most of the scene can remain present while only the moving region becomes hot.
+The demo scene is intentionally oversized: about 170k dynamic dominoes on a board with about 1.2M static objects.
+That scale makes the PTLAS question visible: can the frame update only the moving instances and the partitions they touch?
 
 {{< interactive-ptlas-domino-field >}}
 
-The domino sample also shows that PTLAS is not one automatic strategy. Moving instances create a policy choice.
+Read the colors as state, not decoration.
+Muted cells show partition ownership, saturated cells show partitions updated by the current moving wave, and domino color shows which partition an instance belongs to.
+
+| Demo signal | What it teaches |
+|---|---|
+| Uniform 2D partition grid | Partition ownership is spatial and predictable. |
+| Saturated partition cells | The update region is smaller than the world. |
+| Moving domino set | Per-frame change starts as changed instance transforms. |
+| Updated instance count | Update cost should be read together with how much data changed. |
+| TLAS / PTLAS memory and scratch stats | PTLAS is a different maintenance model, not a free-memory replacement for TLAS. |
+
+In the screenshot state, PTLAS is active, a finite set of instances is moving, the updated partitions are highlighted, and the profiler separates physics, sparse instance-update generation, and top-level update work.
+
+## The Policy Choice
+
+PTLAS does not remove update policy.
+It exposes it.
+
+When an instance moves, the engine still has to decide whether to keep that instance in its local partition or route it through a global dynamic partition.
 
 {{< ptlas-partition-policy >}}
+
+The sample's extra checkbox, "mark all dominoes dynamic in partition", makes the tradeoff more aggressive.
+If one domino in a partition starts moving, the whole partition's domino set can move to the global partition.
+That can reduce partition rewrites, but it can also make the global partition larger and less spatially coherent.
 
 ## The Delta In One Table
 
@@ -68,7 +91,7 @@ The main delta is maintenance granularity.
 | Small localized motion cost | Usually local to changed geometry | Often still tied to broad top-level work | Intended to touch only changed instances and affected partitions |
 | Main optimization question | When to rebuild vs update geometry | How much top-level work is redone per frame | How selective the instance and partition update stream really is |
 
-Khronos and Microsoft both support the same framing here: PTLAS is not a different shader-facing concept from TLAS. It is a different model for maintaining top-level scene state.
+Across APIs, the same framing holds: PTLAS is not a different shader-facing concept from TLAS. It is a different model for maintaining top-level scene state.
 
 ## Who Owns The Update Work?
 
@@ -81,6 +104,35 @@ The CPU still owns high-level policy, feature selection, sizing, allocation, com
 GPU-driven does not mean the CPU disappears. It means per-frame operation data can be generated and consumed without pulling the whole update decision back to the host.
 
 {{< ptlas-cpu-gpu-split >}}
+
+## How The Sample Generates Sparse Work
+
+In the sample, GPU compute authors the per-frame PTLAS update list.
+
+{{< mermaid >}}
+flowchart LR
+    A["Physics compute shader"]
+    B["Marks moved dominoes"]
+    C["Chooses local or global partition"]
+    D["Instance update compute shader"]
+    E["atomicAdd on PTLAS op argCount"]
+    F["Writes changed instance records"]
+    G["Host submits indirect PTLAS update"]
+    H["Builder consumes device-side operation data"]
+
+    A --> B --> C --> D --> E --> F --> G --> H
+{{< /mermaid >}}
+
+Two details matter.
+
+First, the physics pass marks both instance motion and partition state.
+If a domino moves to or from the global partition, the source and destination partitions need compact instance-index lists again.
+
+Second, the update-instance pass does not write a full scene array.
+Each changed domino atomically reserves one slot in the PTLAS write-instance operation, writes its updated transform and partition index there, and increments the operation argument count on the GPU.
+
+That is the behavior to compare against a classic TLAS path: classic TLAS can rebuild or refit correctly, but the build call still reads the top-level instance input as one broad structure.
+The PTLAS path can submit a device-authored operation list whose size follows the changed set.
 
 ## The Vendor Model Converges More Than It Diverges
 
@@ -214,5 +266,7 @@ When localized motion becomes localized native top-level work, PTLAS becomes mea
 - [NVIDIA DXR tutorial: BLAS and TLAS ownership](https://developer.nvidia.com/rtx/raytracing/dxr/dx12-raytracing-tutorial-part-1)
 - [NVIDIA Vulkan ray tracing tutorial: acceleration structure construction](https://nvpro-samples.github.io/vk_raytracing_tutorial_KHR/concepts/acceleration-structures/)
 - [NVIDIA RTX best practices: TLAS rebuild and refit tradeoffs](https://developer.nvidia.com/blog/rtx-best-practices/)
+- [NVIDIA vk_partitioned_tlas sample](https://github.com/nvpro-samples/vk_partitioned_tlas)
+- [NVIDIA RTX Mega Geometry Vulkan samples overview](https://developer.nvidia.com/blog/nvidia-rtx-mega-geometry-now-available-with-new-vulkan-samples/)
 - Khronos Vulkan PTLAS material
 - Microsoft DirectX ray tracing / RTAS material

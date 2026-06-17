@@ -321,9 +321,11 @@ Stage 5 pass checklist:
 - does the edited section advance the baseline -> problem -> solution -> proof narration?
 - does every visual answer a distinct reader question?
 - can any paragraph, bullet, or visual be removed without weakening the story?
+- does each topic end with a concrete takeaway or transition instead of stopping abruptly?
 - does the edited section read cleanly in the website?
 - does it have a clear visual anchor or planned visual anchor?
 - does any Sparkle detail explain a TLAS/PTLAS concept, prove a claim, or expose a useful gap?
+- does the NVIDIA domino sample coverage explain scale, partition colors, update policies, sparse operation generation, and measurement signals?
 - does it avoid repeating another section's point?
 - does it support spoken narration as well as silent reading?
 
@@ -340,6 +342,8 @@ Stage 5 reader-focus guardrails:
 - do not enumerate implementation files in the live article as proof
 - use diagrams, checkpoint tables, metrics, captures, or specific line citations instead of raw source-file lists
 - keep source referrals out of the teaching flow; put reference links in a compact `Resources` section unless an inline link is essential to understand the sentence
+- use the NVIDIA sample as behavioral evidence, not as a copied walkthrough of its files
+- prefer "what the UI/source proves" over "which source file contains it"
 
 Stage 5 working document:
 
