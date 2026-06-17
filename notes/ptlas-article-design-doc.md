@@ -17,6 +17,16 @@ Recommended article thesis:
 
 "PTLAS is not just a new API surface for ray tracing. It is a different update model for top-level acceleration structures, and its real value only appears when an engine stops rewriting the whole scene and starts expressing selective instance and partition updates."
 
+Core reader takeaway:
+
+"PTLAS is designed so top-level update cost can follow the instances and partitions that actually changed, instead of behaving like the worst-case whole scene changed every frame."
+
+Important wording nuance:
+
+- do not say PTLAS guarantees we only pay for animated objects
+- say PTLAS enables or is designed for update cost to scale with changed instances and touched partitions
+- keep reminding the reader that partition quality, touched partition count, global partition policy, and native operation generation decide whether the theoretical benefit appears in practice
+
 Why this is the strongest angle:
 
 - It matches the official Khronos, NVIDIA, and Microsoft descriptions.
@@ -197,7 +207,7 @@ It could overclaim unless framed very carefully.
 
 Best candidates:
 
-1. `What Changes When an Engine Moves From TLAS to PTLAS`
+1. `Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 2. `PTLAS Is More Than a New TLAS API`
 3. `Designing PTLAS for a Real Engine`
 4. `PTLAS in SparkleEngine: Architecture, Tradeoffs, and the Hard Part`
@@ -207,7 +217,7 @@ Best candidates:
 
 Approved working title:
 
-`What Changes When an Engine Moves From TLAS to PTLAS`
+`Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 
 Reason:
 
@@ -610,6 +620,24 @@ The best adaptation of the blog's current style is:
 - strong concluding acceptance criteria
 
 That will feel native to the blog and still work for an experienced engineering audience.
+
+### 14.8 Narration-first constraint
+
+This article also needs to work as a live narrated walkthrough for colleagues, not only as a static read.
+
+That changes the UX target in useful ways:
+
+- the article should be skimmable at a glance
+- visuals should carry the main explanatory load
+- prose should support spoken explanation rather than replace it
+- sections should avoid repeating the same thesis in slightly different words
+- each section should have one obvious visual or table the speaker can point at
+
+Recommended practical rule:
+
+- if a point can be shown clearly in a diagram, screenshot, table, or overlay, keep the surrounding prose short
+- prefer compact framing paragraphs and strong captions over long dense explanation
+- avoid long uninterrupted text blocks that would be tiring to read and awkward to present
 
 ## 15. Screenshot And Data Extraction Plan
 

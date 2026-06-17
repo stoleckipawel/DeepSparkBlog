@@ -1,0 +1,130 @@
+{{/* Bite-size BLAS/TLAS ownership baseline for the PTLAS article opening. */}}
+<section class="rt-baseline" aria-label="Classic BLAS and TLAS ownership baseline">
+  <div class="rt-baseline-head">
+    <div>
+      <div class="rt-baseline-kicker">Classic ray tracing baseline</div>
+      <h3>BLAS stores geometry. TLAS stores instances.</h3>
+    </div>
+    <p>The first mental model is ownership, not update policy yet.</p>
+  </div>
+
+  <div class="rt-baseline-flow" aria-hidden="true">
+    <svg viewBox="0 0 860 280" role="img">
+      <defs>
+        <marker id="rtBaselineArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L8,3 L0,6 Z" fill="rgb(var(--color-neutral-400,120,120,130))" />
+        </marker>
+      </defs>
+
+      <rect x="40" y="54" width="190" height="64" rx="8" class="box geometry" />
+      <text x="135" y="82" text-anchor="middle">Geometry input</text>
+      <text x="135" y="104" text-anchor="middle" class="sub">vertices / indices / AABBs</text>
+
+      <rect x="336" y="54" width="190" height="64" rx="8" class="box blas" />
+      <text x="431" y="82" text-anchor="middle">BLAS</text>
+      <text x="431" y="104" text-anchor="middle" class="sub">geometry acceleration</text>
+
+      <rect x="40" y="170" width="190" height="64" rx="8" class="box instances" />
+      <text x="135" y="198" text-anchor="middle">Instance input</text>
+      <text x="135" y="220" text-anchor="middle" class="sub">transform + metadata</text>
+
+      <rect x="336" y="170" width="190" height="64" rx="8" class="box tlas" />
+      <text x="431" y="198" text-anchor="middle">TLAS</text>
+      <text x="431" y="220" text-anchor="middle" class="sub">scene instance traversal</text>
+
+      <rect x="636" y="112" width="184" height="64" rx="8" class="box trace" />
+      <text x="728" y="140" text-anchor="middle">Ray traversal</text>
+      <text x="728" y="162" text-anchor="middle" class="sub">TLAS points to BLAS</text>
+
+      <g fill="none" stroke="rgb(var(--color-neutral-400,120,120,130))" stroke-width="2" marker-end="url(#rtBaselineArrow)">
+        <path d="M230,86 L336,86" />
+        <path d="M230,202 L336,202" />
+        <path d="M526,202 C590,202 590,144 636,144" />
+        <path d="M431,170 C431,140 431,122 431,118" />
+      </g>
+
+      <text x="431" y="145" text-anchor="middle" class="bridge">instance record references a BLAS</text>
+    </svg>
+  </div>
+
+  <p class="rt-baseline-takeaway">This is the classic two-level structure: geometry below, instance placement above.</p>
+</section>
+
+<style>
+.rt-baseline{
+  margin:1.5em 0;
+  padding:.75em;
+  border:1px solid transparent;
+  border-radius:.75rem;
+  background:rgb(var(--color-neutral-50,245,245,247));
+  color:inherit;
+  overflow:hidden;
+}
+:is(.dark,.scheme-congo) .rt-baseline{background:rgb(var(--color-neutral-800,18,18,22))}
+.rt-baseline-head{
+  display:grid;
+  grid-template-columns:minmax(16rem,.72fr) minmax(18rem,1fr);
+  gap:.75em;
+  align-items:end;
+  margin-bottom:.75em;
+}
+.rt-baseline-kicker{
+  color:var(--ds-info-light);
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.68em;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.rt-baseline h3{
+  margin:.15em 0 0;
+  font-size:1.02em;
+  line-height:1.25;
+}
+.rt-baseline-head p{
+  margin:0;
+  opacity:.66;
+  font-size:.86em;
+  line-height:1.5;
+}
+.rt-baseline-flow{
+  border:1px solid color-mix(in srgb,currentColor 8%,transparent);
+  border-radius:.5rem;
+  background:rgba(var(--ds-info-rgb),.035);
+  overflow:hidden;
+}
+:is(.dark,.scheme-congo) .rt-baseline-flow{background:rgb(var(--color-neutral-900,11,11,14))}
+.rt-baseline-flow svg{
+  display:block;
+  width:100%;
+  height:auto;
+}
+.rt-baseline-flow .box{stroke-width:1.4}
+.rt-baseline-flow .geometry{fill:rgba(var(--ds-warn-rgb),.12);stroke:var(--ds-warn)}
+.rt-baseline-flow .blas{fill:rgba(var(--ds-warn-rgb),.2);stroke:var(--ds-warn)}
+.rt-baseline-flow .instances{fill:rgba(var(--ds-info-rgb),.12);stroke:var(--ds-info)}
+.rt-baseline-flow .tlas{fill:rgba(var(--ds-info-rgb),.2);stroke:var(--ds-info)}
+.rt-baseline-flow .trace{fill:rgba(var(--ds-success-rgb),.13);stroke:var(--ds-success)}
+.rt-baseline-flow text{
+  fill:currentColor;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:18px;
+  font-weight:700;
+}
+.rt-baseline-flow .sub,
+.rt-baseline-flow .bridge{
+  opacity:.58;
+  font-size:13px;
+  font-weight:600;
+}
+.rt-baseline-takeaway{
+  margin:.65em 0 0;
+  opacity:.68;
+  font-size:.83em;
+  line-height:1.5;
+  padding:0;
+}
+@media (max-width: 900px){
+  .rt-baseline-head{grid-template-columns:1fr}
+}
+</style>

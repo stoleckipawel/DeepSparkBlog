@@ -3,7 +3,7 @@
 Date: 2026-06-17
 Status: Draft 1
 Owner: Pawel + Codex
-Article: `What Changes When an Engine Moves From TLAS to PTLAS`
+Article: `Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 Depends on:
 
 - `notes/ptlas-article-design-doc.md`
@@ -179,6 +179,7 @@ Status:
 Purpose:
 
 - show logical PTLAS partition layout
+- provide one article-grade wide partition-field image in the style of the strongest vendor sample visuals
 
 Type:
 
@@ -199,10 +200,17 @@ What this proves:
 
 - Sparkle already produces partition assignments
 - the partition grid is visible in-engine
+- the scene is large but the partition model stays readable from one high-level camera
 
 Best article use:
 
 - section 2 or 3
+
+Preferred framing:
+
+- high or shallow aerial camera
+- broad view over many partitions
+- enough scene motion context that the reader understands this is a world partitioning picture, not only a debug heatmap
 
 Status:
 
@@ -213,6 +221,7 @@ Status:
 Purpose:
 
 - show dirty transforms and update-localized behavior
+- show a clearly saturated active region against a much larger calm partition field
 
 Type:
 
@@ -233,10 +242,17 @@ What this proves:
 
 - Sparkle distinguishes changed regions / changed instances
 - the workload is not uniformly dirty
+- the reader can point at the active patch of the world immediately
 
 Best article use:
 
 - section 3 or 6
+
+Preferred framing:
+
+- same or nearly same camera as E02
+- visible contrast between calm partitions and hot partitions
+- if possible, movement trails or dynamic objects visible inside the hot region
 
 Status:
 
@@ -247,6 +263,7 @@ Status:
 Purpose:
 
 - show transform changes vs partition crossings
+- show motion in a way that feels spatial and animated, not only numeric
 
 Type:
 
@@ -270,6 +287,12 @@ What this proves:
 Best article use:
 
 - section 3
+
+Preferred framing:
+
+- reuse the wide partition-field framing
+- make boundary crossings readable at a glance
+- if possible, choose objects whose movement arc is visually obvious
 
 Status:
 
@@ -700,6 +723,7 @@ If any of these are missing, note them explicitly:
 - no backend cross-check beyond D3D12
 - no native-operations state that clearly supports the article's hard-part argument
 - no overlay screenshot with readable live values
+- no strong wide partition-field image that immediately communicates localized updates
 
 ## 14. Stage 2 Status Summary
 

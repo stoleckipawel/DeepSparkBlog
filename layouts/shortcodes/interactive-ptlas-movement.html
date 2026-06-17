@@ -1,0 +1,235 @@
+{{/* Interactive PTLAS movement / partition strategy widget */}}
+<div class="interactive-widget" id="ptlas-movement-widget">
+  <div class="widget-body">
+    <div class="ptlas-move-head">
+      <div class="ptlas-move-title">Partition Movement Explorer</div>
+      <div class="ptlas-move-sub">Click the scenario pills below. Follow the moving object and watch whether the engine stays inside one partition, touches two partitions, or routes the object through a global partition policy.</div>
+    </div>
+
+    <div class="widget-toolbar">
+      <div class="widget-toolbar-left">
+        <button class="widget-pill ptlas-move-btn ptlas-move-btn-active" data-scenario="0" onclick="ptlasMoveSetScenario(0)">Local motion</button>
+        <button class="widget-pill ptlas-move-btn" data-scenario="1" onclick="ptlasMoveSetScenario(1)">Partition crossing</button>
+        <button class="widget-pill ptlas-move-btn" data-scenario="2" onclick="ptlasMoveSetScenario(2)">Route to global partition</button>
+      </div>
+      <div class="widget-toolbar-right">
+        <button class="widget-pill" onclick="ptlasMoveReplay()">Replay movement</button>
+      </div>
+    </div>
+
+    <div class="ptlas-move-story" id="ptlas-move-story"></div>
+
+    <div class="ptlas-move-steps">
+      <div class="ptlas-move-step" id="ptlas-move-step-0">1. object starts moving</div>
+      <div class="ptlas-move-step" id="ptlas-move-step-1">2. ownership policy is resolved</div>
+      <div class="ptlas-move-step" id="ptlas-move-step-2">3. native work implication changes</div>
+    </div>
+
+    <div class="ptlas-move-legend">
+      <span><i class="ptlas-move-swatch ptlas-move-swatch--local"></i> local partition ownership</span>
+      <span><i class="ptlas-move-swatch ptlas-move-swatch--cross"></i> crossing / migration case</span>
+      <span><i class="ptlas-move-swatch ptlas-move-swatch--global"></i> global partition policy</span>
+    </div>
+
+    <div class="ptlas-move-layout">
+      <svg id="ptlas-move-scene" viewBox="0 0 420 240" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="ptlas-move-side">
+        <div class="ptlas-move-card">
+          <div class="ptlas-move-card-k">Movement consequence</div>
+          <div class="ptlas-move-card-v" id="ptlas-move-consequence"></div>
+        </div>
+        <div class="ptlas-move-card">
+          <div class="ptlas-move-card-k">Native work implication</div>
+          <div class="ptlas-move-card-v" id="ptlas-move-native"></div>
+        </div>
+        <div class="ptlas-move-card">
+          <div class="ptlas-move-card-k">Why this matters</div>
+          <div class="ptlas-move-card-v" id="ptlas-move-why"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.ptlas-move-head{margin-bottom:.8em}
+.ptlas-move-title{font-weight:800;font-size:.98em}
+.ptlas-move-sub{font-size:.82em;opacity:.72;line-height:1.45;margin-top:.15em}
+.ptlas-move-story{margin:.7em 0 .75em;padding:.65em .8em;border-radius:.65rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:rgba(255,255,255,.42);font-size:.82em;line-height:1.55}
+:is(.dark,.scheme-congo) .ptlas-move-story{border-color:var(--color-neutral-700);background:rgba(255,255,255,.02)}
+.ptlas-move-steps{display:flex;flex-wrap:wrap;gap:.55em;margin:0 0 .75em}
+.ptlas-move-step{font-size:.75em;padding:.38em .65em;border-radius:999px;border:1px solid var(--color-neutral-200,#e5e5e5);background:rgba(255,255,255,.38);opacity:.55;transition:all .2s ease}
+:is(.dark,.scheme-congo) .ptlas-move-step{border-color:var(--color-neutral-700);background:rgba(255,255,255,.02)}
+.ptlas-move-step-active{opacity:1;border-color:var(--ds-info);color:var(--ds-info);font-weight:700}
+.ptlas-move-legend{display:flex;flex-wrap:wrap;gap:.8em 1.1em;font-size:.74em;opacity:.78;margin:.1em 0 .8em}
+.ptlas-move-legend span{display:inline-flex;align-items:center;gap:.4em}
+.ptlas-move-swatch{display:inline-block;width:.82em;height:.82em;border-radius:.2em;border:1px solid rgba(15,23,42,.18)}
+.ptlas-move-swatch--local{background:rgba(59,130,246,.16)}
+.ptlas-move-swatch--cross{background:rgba(244,114,182,.88)}
+.ptlas-move-swatch--global{background:rgba(245,158,11,.22)}
+.ptlas-move-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.9fr);gap:1em;align-items:start}
+.ptlas-move-side{display:grid;gap:.65em}
+.ptlas-move-card{padding:.75em;border-radius:.7rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:rgba(255,255,255,.4)}
+:is(.dark,.scheme-congo) .ptlas-move-card{border-color:var(--color-neutral-700);background:rgba(255,255,255,.02)}
+.ptlas-move-card-k{font-size:.72em;text-transform:uppercase;letter-spacing:.04em;opacity:.62}
+.ptlas-move-card-v{font-size:.88em;line-height:1.55;font-weight:650;margin-top:.25em}
+.ptlas-move-btn-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:700}
+@media (max-width: 900px){
+  .ptlas-move-layout{grid-template-columns:1fr}
+}
+</style>
+
+<script>
+(function(){
+let moveScenarioIdx = 0;
+let moveAnim = null;
+let movePhase = 0;
+const scenarios = [
+  {
+    label:"Local motion",
+    state:"local",
+    story:"A moving car stays inside the same spatial cell. This is the easiest PTLAS case: transform dirtiness changes, but partition ownership does not.",
+    consequence:"Only one partition owns the moving instance, so the maintenance scope can stay compact.",
+    native:"One local partition update path is enough if the native op stream preserves the same locality.",
+    why:"This is the happy-path PTLAS case: localized motion should look localized in native work too."
+  },
+  {
+    label:"Partition crossing",
+    state:"boundary",
+    story:"Now the same object moves far enough to leave one partition and enter another. The scene change is still tiny, but partition ownership is no longer stable.",
+    consequence:"The engine now has to update both the old partition and the new partition because ownership changed.",
+    native:"This is where PTLAS starts testing whether the engine can express migration instead of collapsing back to broad scene work.",
+    why:"Boundary crossings are the first case where partition membership matters, not just transform dirtiness."
+  },
+  {
+    label:"Route to global partition",
+    state:"global",
+    story:"Instead of constantly reassigning a highly dynamic object between local partitions, the engine may route it through a global partition policy.",
+    consequence:"Highly dynamic movement can be routed through a global partition instead of constantly reassigning local ownership.",
+    native:"The native work is still selective, but the policy decision moves from local partition migration to global-partition handling.",
+    why:"This is one of the places where PTLAS becomes an engine policy problem, not only a structure problem."
+  }
+];
+
+function setMovePhase(phase){
+  movePhase = phase;
+  for(let i=0;i<3;i++){
+    const el = document.getElementById(`ptlas-move-step-${i}`);
+    if(el) el.classList.toggle("ptlas-move-step-active", i === phase);
+  }
+}
+
+function renderScene(state, t){
+  const svg = document.getElementById("ptlas-move-scene");
+  if(!svg) return;
+  svg.innerHTML = "";
+
+  const makeRect = (x,y,w,h,fill,stroke,label) => {
+    const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    r.setAttribute("x",x); r.setAttribute("y",y); r.setAttribute("width",w); r.setAttribute("height",h); r.setAttribute("rx","12");
+    r.setAttribute("fill",fill); r.setAttribute("stroke",stroke);
+    svg.appendChild(r);
+    if(label){
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x",x+12); t.setAttribute("y",y+22); t.setAttribute("fill","currentColor");
+      t.setAttribute("style","font:700 12px ui-monospace,monospace; opacity:.78");
+      t.textContent = label;
+      svg.appendChild(t);
+    }
+  };
+
+  makeRect(20,20,160,85,"rgba(59,130,246,.07)","rgba(59,130,246,.22)","Partition A");
+  makeRect(200,20,160,85,"rgba(59,130,246,.07)","rgba(59,130,246,.22)","Partition B");
+  makeRect(110,140,160,60,"rgba(245,158,11,.07)","rgba(245,158,11,.24)","Global Partition");
+
+  const drawObject = (cx,cy,color,text) => {
+    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",cx); c.setAttribute("cy",cy); c.setAttribute("r","18");
+    c.setAttribute("fill",color);
+    c.setAttribute("stroke","rgba(15,23,42,.35)");
+    svg.appendChild(c);
+    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",cx); t.setAttribute("y",cy+4);
+    t.setAttribute("text-anchor","middle");
+    t.setAttribute("fill","#fff");
+    t.setAttribute("style","font:800 11px ui-monospace,monospace");
+    t.textContent = text;
+    svg.appendChild(t);
+  };
+
+  const drawArrow = (x1,y1,x2,y2,color) => {
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1",x1); line.setAttribute("y1",y1); line.setAttribute("x2",x2); line.setAttribute("y2",y2);
+    line.setAttribute("stroke",color); line.setAttribute("stroke-width","4"); line.setAttribute("stroke-linecap","round");
+    svg.appendChild(line);
+    const arrow = document.createElementNS("http://www.w3.org/2000/svg","polygon");
+    arrow.setAttribute("points",`${x2},${y2} ${x2-12},${y2-6} ${x2-12},${y2+6}`);
+    arrow.setAttribute("fill",color);
+    svg.appendChild(arrow);
+  };
+
+  if(state === "local"){
+    const x = 75 + 40*t;
+    drawObject(x,62,"rgba(34,197,94,.92)","obj");
+    if(t > .2) drawArrow(110,62,145,62,"rgba(34,197,94,.8)");
+  } else if(state === "boundary"){
+    const x = 105 + 110*t;
+    drawObject(x,62,"rgba(244,114,182,.92)","obj");
+    if(t > .15) drawArrow(165,62,215,62,"rgba(244,114,182,.86)");
+    const note = document.createElementNS("http://www.w3.org/2000/svg","text");
+    note.setAttribute("x","130"); note.setAttribute("y","120");
+    note.setAttribute("fill","var(--ds-danger)");
+    note.setAttribute("style","font:700 12px ui-monospace,monospace");
+    note.textContent = t > .55 ? "old + new partition touched" : "crossing in progress";
+    svg.appendChild(note);
+  } else {
+    const x = 85 + 105*t;
+    const y = 62 + 108*t;
+    if(t < .9){
+      drawObject(x,y,"rgba(245,158,11,.94)","obj");
+      drawArrow(105,75,170,150,"rgba(245,158,11,.86)");
+    } else {
+      drawObject(190,170,"rgba(245,158,11,.94)","obj");
+    }
+  }
+}
+
+function replayMove(){
+  if(moveAnim) cancelAnimationFrame(moveAnim);
+  const start = performance.now();
+  function frame(now){
+    const dt = Math.min((now - start) / 2200, 1);
+    if(dt < 0.33) setMovePhase(0);
+    else if(dt < 0.66) setMovePhase(1);
+    else setMovePhase(2);
+    renderScene(scenarios[moveScenarioIdx].state, dt);
+    if(dt < 1) moveAnim = requestAnimationFrame(frame);
+  }
+  moveAnim = requestAnimationFrame(frame);
+}
+
+function renderScenario(idx){
+  moveScenarioIdx = idx;
+  const s = scenarios[idx];
+  document.querySelectorAll('#ptlas-movement-widget .ptlas-move-btn').forEach(btn => {
+    btn.classList.toggle('ptlas-move-btn-active', parseInt(btn.dataset.scenario,10) === idx);
+  });
+  document.getElementById("ptlas-move-story").textContent = s.story;
+  document.getElementById("ptlas-move-consequence").textContent = s.consequence;
+  document.getElementById("ptlas-move-native").textContent = s.native;
+  document.getElementById("ptlas-move-why").textContent = s.why;
+  replayMove();
+}
+
+window.ptlasMoveSetScenario = renderScenario;
+window.ptlasMoveReplay = replayMove;
+const el = document.getElementById("ptlas-movement-widget");
+const obs = new IntersectionObserver(entries => {
+  if(entries[0].isIntersecting){
+    obs.disconnect();
+    renderScenario(0);
+  }
+},{rootMargin:'200px'});
+if(el) obs.observe(el);
+})();
+</script>

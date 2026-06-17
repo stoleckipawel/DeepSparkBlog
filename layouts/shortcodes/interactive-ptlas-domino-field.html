@@ -1,0 +1,370 @@
+{{/* Narration-first PTLAS partition-field visual inspired by the NVIDIA vk_partitioned_tlas sample. */}}
+<div class="interactive-widget ptlas-field-widget" id="ptlas-field-widget">
+  <div class="widget-body">
+    <div class="ptlas-field-intro">
+      <div class="ptlas-field-kicker">Partition locality</div>
+      <strong>Only the moving region should become hot</strong>
+      <span>Step through the board, the moving wave, and the partitions touched this frame.</span>
+    </div>
+
+    <div class="ptlas-field-stage">
+      <canvas id="ptlas-field-canvas" width="1280" height="690" aria-label="Animated PTLAS domino field"></canvas>
+    </div>
+
+    <div class="widget-info ptlas-field-caption" id="ptlas-field-caption">
+      Muted cells show ownership. Bright cells show the update region.
+    </div>
+
+    <div class="widget-toolbar">
+      <div class="widget-toolbar-left" role="tablist" aria-label="PTLAS visual steps">
+        <button class="widget-pill ptlas-field-step ptlas-field-step-active" type="button" data-mode="0">Partitioned board</button>
+        <button class="widget-pill ptlas-field-step" type="button" data-mode="1">Toppling wave</button>
+        <button class="widget-pill ptlas-field-step" type="button" data-mode="2">PTLAS update</button>
+      </div>
+      <div class="widget-toolbar-right">
+        <button class="widget-pill ptlas-field-replay" type="button">Replay wave</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.ptlas-field-widget{
+  --ptlas-accent:var(--ds-danger);
+  --ptlas-blue:var(--ds-info);
+}
+.ptlas-field-intro{
+  margin:0 0 .65em;
+  display:grid;
+  gap:.18em;
+}
+.ptlas-field-kicker{
+  color:var(--ds-info-light);
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.68em;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.ptlas-field-intro strong{
+  font-size:1em;
+  line-height:1.25;
+}
+.ptlas-field-intro span{
+  max-width:72ch;
+  opacity:.62;
+  font-size:.84em;
+  line-height:1.5;
+}
+.ptlas-field-step-active{
+  color:var(--ds-info)!important;
+  border-color:var(--ds-info)!important;
+  font-weight:700!important;
+}
+.ptlas-field-step[data-mode="2"].ptlas-field-step-active{
+  color:var(--ds-danger)!important;
+  border-color:var(--ds-danger)!important;
+}
+.ptlas-field-stage{
+  position:relative;
+  overflow:hidden;
+  border-radius:.5rem;
+  border:1px solid color-mix(in srgb,currentColor 8%,transparent);
+  background:rgb(var(--color-neutral-100,230,230,234));
+}
+:is(.dark,.scheme-congo) .ptlas-field-stage{background:rgb(var(--color-neutral-900,11,11,14))}
+.ptlas-field-stage canvas{
+  display:block;
+  width:100%;
+  height:auto;
+}
+.ptlas-field-caption{
+  margin:.45em 0 0;
+}
+@media (max-width: 900px){
+  .ptlas-field-intro{gap:.28em}
+}
+</style>
+
+<script>
+(function(){
+  const root = document.getElementById("ptlas-field-widget");
+  const canvas = document.getElementById("ptlas-field-canvas");
+  if(!root || !canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  const cols = 24;
+  const rows = 16;
+  let mode = 0;
+  let startedAt = performance.now();
+  let raf = 0;
+  const styles = getComputedStyle(root);
+  const cssVar = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+  const infoRgb = cssVar("--ds-info-rgb", "59,130,246");
+  const dangerRgb = cssVar("--ds-danger-rgb", "239,68,68");
+  const info = `rgb(${infoRgb})`;
+  const danger = `rgb(${dangerRgb})`;
+  const neutral100Rgb = cssVar("--color-neutral-100", "230,230,234");
+  const neutral300Rgb = cssVar("--color-neutral-300", "161,161,170");
+
+  const captions = [
+    "Muted cells show partition ownership.",
+    "The bright band is local motion.",
+    "Saturated cells are the PTLAS update region."
+  ];
+
+  const tileColors = [];
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      tileColors.push({
+        h:190 + ((x * 17 + y * 31 + (x*y*5)) % 82),
+        s:10 + ((x+y) % 4) * 3,
+        l:38 + ((x * 3 + y * 5) % 12)
+      });
+    }
+  }
+
+  function lerp(a,b,t){ return a + (b - a) * t; }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function project(gx, gy, lift){
+    const u = gx / cols;
+    const v = gy / rows;
+    const left = lerp(210, 34, v);
+    const right = lerp(1070, 1246, v);
+    const y = lerp(150, 652, Math.pow(v, .92));
+    const x = lerp(left, right, u);
+    return [x, y - (lift || 0)];
+  }
+
+  function drawPoly(points, fill, stroke, width){
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for(let i=1;i<points.length;i++) ctx.lineTo(points[i][0], points[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = fill;
+    ctx.fill();
+    if(stroke){
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = width || 1;
+      ctx.stroke();
+    }
+  }
+
+  function waveCenter(t){
+    return {
+      x: 7.2 + t * 9.4,
+      y: 9.3 + Math.sin(t * Math.PI * 2.1) * 1.05
+    };
+  }
+
+  function hotCells(t){
+    if(mode !== 2) return new Map();
+    const center = waveCenter(t);
+    const map = new Map();
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const dx = (x + .5) - center.x;
+        const dy = (y + .5) - center.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if(d < 2.05){
+          map.set(`${x},${y}`, clamp(1 - d / 2.35, .22, 1));
+        }
+      }
+    }
+    return map;
+  }
+
+  function drawBackground(){
+    const sky = ctx.createLinearGradient(0, 0, 0, 170);
+    sky.addColorStop(0, "#11151b");
+    sky.addColorStop(.55, "#171d24");
+    sky.addColorStop(1, "#202733");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, canvas.width, 170);
+    ctx.fillStyle = "#0f1319";
+    ctx.fillRect(0, 145, canvas.width, canvas.height - 145);
+    ctx.fillStyle = "rgba(255,255,255,.035)";
+    ctx.fillRect(0, 145, canvas.width, 1);
+
+    const vignette = ctx.createRadialGradient(640, 360, 120, 640, 360, 760);
+    vignette.addColorStop(0, "rgba(255,255,255,0)");
+    vignette.addColorStop(1, "rgba(0,0,0,.42)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawBoard(t){
+    const hot = hotCells(t);
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const p0 = project(x,y);
+        const p1 = project(x+1,y);
+        const p2 = project(x+1,y+1);
+        const p3 = project(x,y+1);
+        const color = tileColors[y*cols+x];
+        const heat = hot.get(`${x},${y}`) || 0;
+        const baseAlpha = mode === 0 ? .82 : .72;
+        let fill = `hsla(${color.h},${color.s}%,${color.l}%,${baseAlpha})`;
+        let stroke = "rgba(213,231,244,.14)";
+        let width = 1;
+        if(heat > 0){
+          fill = `rgba(${dangerRgb},${.24 + heat * .46})`;
+          stroke = `rgba(${dangerRgb},.68)`;
+          width = 1.8;
+        }
+        drawPoly([p0,p1,p2,p3], fill, stroke, width);
+      }
+    }
+
+    for(let x=0;x<=cols;x+=4){
+      const a = project(x,0), b = project(x,rows);
+      ctx.beginPath();
+      ctx.moveTo(a[0],a[1]);
+      ctx.lineTo(b[0],b[1]);
+      ctx.strokeStyle = `rgba(${neutral100Rgb},.2)`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+    for(let y=0;y<=rows;y+=4){
+      const a = project(0,y), b = project(cols,y);
+      ctx.beginPath();
+      ctx.moveTo(a[0],a[1]);
+      ctx.lineTo(b[0],b[1]);
+      ctx.strokeStyle = `rgba(${neutral100Rgb},.18)`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+
+    return hot.size;
+  }
+
+  function pathPoint(path, k){
+    const gx = path.x + k * path.len;
+    const gy = path.y + Math.sin(k * Math.PI * path.freq + path.phase) * path.amp;
+    return {gx, gy};
+  }
+
+  const paths = [
+    {x:1.2,y:4.0,len:7.5,amp:.9,freq:2.0,phase:.1},
+    {x:3.0,y:7.0,len:9.5,amp:1.0,freq:2.5,phase:1.6},
+    {x:7.8,y:9.4,len:9.9,amp:1.0,freq:2.1,phase:.4,active:true},
+    {x:12.0,y:5.8,len:9.2,amp:.8,freq:2.7,phase:2.3},
+    {x:2.0,y:12.9,len:8.2,amp:.65,freq:2.4,phase:1.0},
+    {x:10.2,y:13.2,len:9.0,amp:.8,freq:2.0,phase:2.8},
+    {x:15.3,y:10.2,len:7.4,amp:1.05,freq:2.2,phase:.8},
+    {x:16.4,y:3.0,len:6.4,amp:.6,freq:2.6,phase:1.9},
+    {x:4.8,y:2.1,len:8.0,amp:.55,freq:2.4,phase:2.5}
+  ];
+
+  function drawPath(path, t){
+    const samples = 84;
+    const points = [];
+    for(let i=0;i<samples;i++){
+      const k = i / (samples - 1);
+      const p = pathPoint(path, k);
+      points.push(project(p.gx, p.gy, 6));
+    }
+
+    ctx.beginPath();
+    points.forEach((p,i)=>{
+      if(i === 0) ctx.moveTo(p[0], p[1]);
+      else ctx.lineTo(p[0], p[1]);
+    });
+    ctx.strokeStyle = path.active && mode > 0 ? `rgba(${infoRgb},.72)` : "rgba(8,13,19,.62)";
+    ctx.lineWidth = path.active && mode > 0 ? 2.1 : 1.45;
+    ctx.stroke();
+
+    for(let i=0;i<samples;i+=2){
+      const k = i / (samples - 1);
+      const current = points[i];
+      const next = points[Math.min(samples - 1, i + 1)];
+      const active = path.active && mode > 0 && Math.abs(k - t) < .105;
+      const angle = Math.atan2(next[1]-current[1], next[0]-current[0]) + Math.PI / 2;
+      const dominoLength = active ? 13 : 9;
+      const dominoWidth = active ? 3.2 : 2.1;
+      ctx.save();
+      ctx.translate(current[0], current[1]);
+      ctx.rotate(angle + (active ? Math.sin(performance.now()/130 + i) * .65 : 0));
+      ctx.fillStyle = active ? (mode === 2 ? danger : info) : "rgba(5,9,14,.76)";
+      ctx.shadowColor = active ? (mode === 2 ? `rgba(${dangerRgb},.48)` : `rgba(${infoRgb},.42)`) : "transparent";
+      ctx.shadowBlur = active ? 8 : 0;
+      ctx.fillRect(-dominoWidth/2, -dominoLength/2, dominoWidth, dominoLength);
+      ctx.restore();
+    }
+  }
+
+  function drawMovers(t){
+    if(mode === 0) return;
+    const center = waveCenter(t);
+    for(let i=0;i<22;i++){
+      const jitterX = Math.sin(i * 1.7) * .35;
+      const jitterY = Math.cos(i * 1.1) * .45;
+      const p = project(center.x + jitterX, center.y + jitterY, 18 + Math.sin(i + t*10) * 4);
+      ctx.beginPath();
+      ctx.arc(p[0], p[1], mode === 2 ? 5.2 : 4.7, 0, Math.PI * 2);
+      ctx.fillStyle = mode === 2 ? danger : info;
+      ctx.shadowColor = mode === 2 ? `rgba(${dangerRgb},.52)` : `rgba(${infoRgb},.46)`;
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(${neutral300Rgb},.82)`;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+  }
+
+  function drawAnnotations(t){
+    if(mode === 0) return;
+    const center = project(waveCenter(t).x, waveCenter(t).y, 30);
+    ctx.beginPath();
+    ctx.arc(center[0], center[1], mode === 2 ? 62 : 38, 0, Math.PI * 2);
+    ctx.strokeStyle = mode === 2 ? `rgba(${dangerRgb},.62)` : `rgba(${infoRgb},.58)`;
+    ctx.lineWidth = mode === 2 ? 3 : 2.4;
+    ctx.setLineDash([10, 10]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function renderCaption(){
+    document.getElementById("ptlas-field-caption").textContent = captions[mode];
+  }
+
+  function render(now){
+    const t = ((now - startedAt) % 5600) / 5600;
+    drawBackground();
+    drawBoard(t);
+    paths.forEach(path => drawPath(path, t));
+    drawMovers(t);
+    drawAnnotations(t);
+    renderCaption();
+    raf = requestAnimationFrame(render);
+  }
+
+  function setMode(nextMode){
+    mode = nextMode;
+    startedAt = performance.now();
+    root.querySelectorAll(".ptlas-field-step").forEach(button => {
+      button.classList.toggle("ptlas-field-step-active", Number(button.dataset.mode) === mode);
+    });
+  }
+
+  root.querySelectorAll(".ptlas-field-step").forEach(button => {
+    button.addEventListener("click", () => setMode(Number(button.dataset.mode)));
+  });
+  root.querySelector(".ptlas-field-replay").addEventListener("click", () => {
+    startedAt = performance.now();
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    if(entries[0].isIntersecting){
+      observer.disconnect();
+      cancelAnimationFrame(raf);
+      setMode(0);
+      raf = requestAnimationFrame(render);
+    }
+  }, {rootMargin:"200px"});
+
+  observer.observe(root);
+})();
+</script>

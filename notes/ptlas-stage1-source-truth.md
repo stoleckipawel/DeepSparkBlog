@@ -3,7 +3,7 @@
 Date: 2026-06-17
 Status: Draft 1
 Owner: Pawel + Codex
-Article: `What Changes When an Engine Moves From TLAS to PTLAS`
+Article: `Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 
 ## 1. Purpose
 

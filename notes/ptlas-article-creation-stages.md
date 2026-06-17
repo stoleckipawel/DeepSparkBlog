@@ -12,10 +12,11 @@ This document translates the PTLAS article design into an execution plan.
 It exists so article creation becomes a staged engineering task rather than an open-ended writing task.
 The goal is to keep the final article:
 
-- grounded in SparkleEngine
+- grounded in a concrete implementation example
 - backed by real captures and diagnostics
 - aligned with the peer audience
 - rich in evidence so it never feels generic
+- focused on reader understanding, not engine promotion
 
 This is not the article itself.
 It is the production document for making the article.
@@ -24,10 +25,11 @@ It is the production document for making the article.
 
 Deliver one strong standalone PTLAS article that:
 
-- explains the classic TLAS baseline briefly
+- explains the classic BLAS / TLAS acceleration-structure baseline first
+- defines update / refit / rebuild vocabulary before introducing PTLAS
 - explains PTLAS as a top-level update-model change
 - compares Khronos, NVIDIA, and Microsoft models where useful
-- uses SparkleEngine as the central implementation case
+- uses SparkleEngine as the concrete implementation case
 - proves claims with engine screenshots, smoke captures, metrics, and code references
 - clearly distinguishes current working architecture from incomplete behavioral payoff
 
@@ -35,17 +37,28 @@ Deliver one strong standalone PTLAS article that:
 
 Approved working title:
 
-- `What Changes When an Engine Moves From TLAS to PTLAS`
+- `Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 
 Strong internal / more direct alternative:
 
-- `SparkleEngine PTLAS: From Logical Updates to Real Selective Rebuilds`
+- `PTLAS: From Logical Updates to Real Selective Rebuilds`
 
 This document uses the approved working title as the default reference.
 
 ## 4. Article Spine
 
-The article should be built around this core argument:
+The article should read as one continuous narration line:
+
+`classic acceleration structures -> classic TLAS update problem -> PTLAS solution model -> implementation proof`
+
+That means each major section should answer one question:
+
+- baseline: what is the classic structure/update model?
+- problem: why is classic TLAS update granularity too broad for local scene changes?
+- solution: what does PTLAS change so the engine can express local top-level work?
+- proof: does a real implementation preserve that selectivity from logical update planning to native submission?
+
+The article should also be built around this core argument:
 
 "A PTLAS integration becomes real only when the engine's update stream controls which instances and partitions are rebuilt."
 
@@ -54,18 +67,35 @@ That is the line that should connect:
 - the intro
 - the structure overview
 - the vendor comparison
-- the Sparkle implementation review
+- the implementation review
 - the metrics
 - the conclusion
 
 ## 5. Production Stages
+
+### How to use the stages
+
+These stages should now be treated as implementation prompts, not only as status markers.
+
+Use each stage like this:
+
+- choose the current stage
+- use its prompt block as the instruction for the next work pass
+- make the output land in the live site article when possible, not only in notes
+- update the stage status after each meaningful pass
+
+Prompt rule:
+
+- Stage 0 to Stage 4 can produce planning artifacts
+- Stage 5 and later should default to changing the live article in `content/posts/ptlas-engine-transition/index.md`
+- notes should support the article, not replace it
 
 ### Stage 0: Freeze the article intent
 
 Goal:
 
 - confirm the article is a standalone peer-level PTLAS piece
-- confirm SparkleEngine is the central implementation case
+- confirm SparkleEngine is the concrete implementation case
 - confirm the article is allowed to be honest about current gaps
 
 Deliverable:
@@ -78,6 +108,10 @@ Exit criteria:
 - audience confirmed
 - scope confirmed as one article, not a series entry
 
+Implementation prompt:
+
+`Freeze the article intent for the PTLAS piece. Confirm title, audience, scope, and tone. Record the decision in the stage notes so later writing passes do not reopen core framing questions.`
+
 ### Stage 0 decision record
 
 Stage 0 is now considered confirmed for this article direction.
@@ -87,9 +121,9 @@ Approved intent:
 - this is a standalone PTLAS article
 - this is a peer-level article for experienced rendering engineers
 - this is not a series entry
-- SparkleEngine is the central implementation case
+- SparkleEngine is the concrete implementation case
 - the article is explicitly allowed to be honest about current architectural and behavioral gaps
-- the article should use vendor references to strengthen the Sparkle discussion, not to replace it
+- the article should use vendor references to strengthen the PTLAS model, not to replace implementation evidence
 
 Approved audience:
 
@@ -99,16 +133,17 @@ Approved audience:
 Approved title direction:
 
 - approved working title:
-  `What Changes When an Engine Moves From TLAS to PTLAS`
+  `Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 - strong internal alternative:
-  `SparkleEngine PTLAS: From Logical Updates to Real Selective Rebuilds`
+  `PTLAS: From Logical Updates to Real Selective Rebuilds`
 
 Approved scope:
 
 - one standalone article
 - includes a compact BLAS / TLAS / PTLAS baseline overview
+- includes a short classic TLAS update/refit/rebuild baseline before PTLAS is introduced
 - focuses on PTLAS as an update-model change
-- centers on SparkleEngine architecture, diagnostics, and current implementation reality
+- uses SparkleEngine architecture, diagnostics, and current implementation reality as evidence
 - does not require follow-up series context to be understood
 
 Approved tone:
@@ -155,6 +190,10 @@ Exit criteria:
 
 - every major claim in the planned article can already be linked to a source or a local engine file
 
+Implementation prompt:
+
+`Gather the authoritative source truth for the PTLAS article. Add only sources that can support real article claims. For each source, record what it proves, what claim it should support, and which SparkleEngine file or diagnostic path it connects to.`
+
 ### Stage 2: Build the evidence package
 
 Goal:
@@ -173,6 +212,10 @@ Exit criteria:
 
 - every planned visual has a matching explanation and evidence source
 
+Implementation prompt:
+
+`Build the PTLAS evidence package for the live article. Define or collect every screenshot, metadata file, timing CSV, and overlay capture the article will need. For every capture, record what it proves and where it should appear in the article.`
+
 ### Stage 3: Draft the visual assets
 
 Goal:
@@ -182,14 +225,34 @@ Goal:
 Deliverables:
 
 - BLAS / TLAS / PTLAS comparison table
+- classic BLAS / TLAS update-refit-rebuild baseline visual
 - PTLAS update-model diagram
-- Sparkle code-path / architecture diagram
+- domino sample partition-policy tradeoff visual
+- implementation code-path / architecture diagram
 - classic TLAS vs PTLAS evidence table
+- interactive widgets that let the reader explore why PTLAS changes update behavior
 
 Exit criteria:
 
-- visuals are specific enough to Sparkle and PTLAS
+- visuals are specific enough to the implementation and PTLAS
 - visuals support the exact article claims
+
+Implementation prompt:
+
+`Draft the article visuals so they can be inserted into the live PTLAS post. Prefer compact tables, clear diagrams, concrete evidence framing, and interactive widgets where interactivity clarifies a behavior difference faster than prose. Every visual must support one concrete article claim.`
+
+Stage 3 working document:
+
+- `notes/ptlas-stage3-visual-assets.md`
+
+Current Stage 3 draft status:
+
+- classic BLAS / TLAS update-refit-rebuild baseline visual: drafted
+- BLAS / TLAS / PTLAS comparison table: drafted
+- PTLAS update-model diagram: drafted
+- domino sample partition-policy tradeoff visual: drafted
+- implementation code-path / architecture diagram: drafted
+- classic TLAS vs PTLAS evidence table: drafted
 
 ### Stage 4: Draft the article skeleton
 
@@ -209,6 +272,21 @@ Exit criteria:
 - no section remains vague
 - every section knows what screenshot, table, metric, or code reference it will use
 
+Implementation prompt:
+
+`Turn the PTLAS article plan into a narration-friendly article skeleton. Define section order, opening text, transitions, and evidence placement so the article can be written directly into the website without inventing structure mid-pass.`
+
+Stage 4 working document:
+
+- `notes/ptlas-stage4-article-skeleton.md`
+
+Current Stage 4 draft status:
+
+- complete section outline: drafted
+- intro: drafted
+- ending: drafted
+- per-section evidence notes: drafted
+
 ### Stage 5: Write the first full article draft
 
 Goal:
@@ -224,6 +302,46 @@ Exit criteria:
 - the article reads end to end
 - all major claims are backed by proof
 - no section depends on future work to make sense
+
+Implementation prompt:
+
+`Advance the live PTLAS website article from structured draft toward publishable prose. Work directly in content/posts/ptlas-engine-transition/index.md. Keep the article concise, visual-first, and presentation-friendly. Replace weak generic phrasing with concrete evidence, add tables/diagrams/callouts where they reduce text, and make sure every major statement is backed by Stage 1 source truth or SparkleEngine implementation evidence. Do not let notes become the main artifact; the live article is the main artifact.`
+
+Stage 5 execution rules:
+
+- prefer editing `content/posts/ptlas-engine-transition/index.md`
+- improve one or more complete sections per pass
+- keep prose skimmable and non-repetitive
+- add placeholders only when they map to a defined Stage 2 or Stage 3 asset
+- preserve technical honesty around current PTLAS gaps
+- when a behavior difference is easier to feel than to read, prefer adding or improving an interactive widget
+
+Stage 5 pass checklist:
+
+- does the edited section advance the baseline -> problem -> solution -> proof narration?
+- does every visual answer a distinct reader question?
+- can any paragraph, bullet, or visual be removed without weakening the story?
+- does the edited section read cleanly in the website?
+- does it have a clear visual anchor or planned visual anchor?
+- does any Sparkle detail explain a TLAS/PTLAS concept, prove a claim, or expose a useful gap?
+- does it avoid repeating another section's point?
+- does it support spoken narration as well as silent reading?
+
+Stage 5 reader-focus guardrails:
+
+- SparkleEngine is evidence, not the protagonist
+- avoid phrases such as `already has a real`, `well past exploring`, `many right pieces`, or anything that sounds like feature boasting
+- prefer `implementation example`, `local proof anchor`, `current path`, and `observable gap`
+- keep a Sparkle reference only if it explains TLAS/PTLAS behavior, supports a concrete claim, or makes a limitation visible
+- remove any sentence whose main effect is to praise the engine rather than help the reader understand PTLAS
+
+Stage 5 working document:
+
+- `notes/ptlas-article-draft-1.md`
+
+Current Stage 5 draft status:
+
+- first complete article markdown draft: drafted
 
 ### Stage 6: Engineering review pass
 
@@ -249,6 +367,10 @@ Exit criteria:
 
 - article is technically credible to experienced rendering engineers
 
+Implementation prompt:
+
+`Review the live PTLAS article like a rendering engineer reviewing a peer draft. Identify overclaims, weak proof, ambiguity, repeated points, poor section rhythm, and any place where vendor or Sparkle behavior is imprecise. Revise the article directly after the review notes are known.`
+
 ### Stage 7: Final polish
 
 Goal:
@@ -267,19 +389,52 @@ Exit criteria:
 
 - the article is publishable
 
+Implementation prompt:
+
+`Polish the live PTLAS article for DeepSparkBlog. Finalize frontmatter, section rhythm, image placement, captions, table formatting, and callouts so the piece feels native to the site and presentation-ready for live narration.`
+
 ## 6. Section-by-Section Build Plan
+
+### Section 0: Classic acceleration-structure baseline
+
+Purpose:
+
+- establish the minimum BLAS / TLAS / update vocabulary needed before PTLAS appears
+
+What this section must include:
+
+- BLAS owns geometry acceleration data
+- TLAS owns scene instance acceleration data
+- TLAS instance records reference BLAS objects
+- update/refit keeps an existing acceleration-structure shape where possible
+- rebuild reconstructs the structure more fully
+- classic TLAS can update correctly but still acts as one scene-level top-level maintenance path
+
+Best evidence:
+
+- bite-size visual showing geometry data -> BLAS and instance data -> TLAS
+- separate rebuild vs update/refit visual
+- short problem statement after those visuals, not inside the same diagram
+
+Avoid:
+
+- turning the article into a beginner ray tracing tutorial
+- spending more time on BLAS than needed for the PTLAS contrast
+- putting ownership, rebuild/refit vocabulary, and PTLAS motivation into one overloaded visual
 
 ### Section 1: The real bottleneck
 
 Purpose:
 
-- establish why PTLAS matters without teaching ray tracing from scratch
+- state the exact problem the article is solving after the classic TLAS baseline
 
 What this section must include:
 
 - the classic TLAS pain point
 - localized motion vs top-level rebuild cost
 - why "valid" does not equal "valuable"
+- one explicit problem statement:
+  `the granularity of scene change is often smaller than the granularity of classic TLAS maintenance`
 
 Best evidence:
 
@@ -320,6 +475,8 @@ What this section must include:
 - selective updates
 - partition movement
 - global partition
+- policy tradeoff:
+  local partition update vs global partition update vs hybrid camera-distance mode
 - optional partition translation mention
 
 Best evidence:
@@ -330,7 +487,7 @@ Best evidence:
 
 Purpose:
 
-- show that Sparkle's framing is aligned with real vendor models
+- show that the article's framing is aligned with real vendor models
 
 What this section must include:
 
@@ -346,11 +503,11 @@ Avoid:
 
 - turning this into API token soup
 
-### Section 5: SparkleEngine today
+### Section 5: Concrete implementation lens
 
 Purpose:
 
-- show what already exists and why it matters
+- use one concrete implementation path to show where PTLAS selectivity can survive or collapse
 
 What this section must include:
 
@@ -374,9 +531,9 @@ Purpose:
 
 What this section must include:
 
-- selective logical updates already exist
+- selective logical updates exist
 - native PTLAS work still collapses into full-scene write behavior
-- therefore the engine is not yet getting full PTLAS behavioral value
+- therefore the implementation is not yet getting full PTLAS behavioral value
 
 Best evidence:
 
@@ -507,7 +664,7 @@ Purpose:
 
 - explain partitions, global partition, and selective rebuilds
 
-### Figure 3: Sparkle PTLAS architecture
+### Figure 3: Implementation PTLAS architecture
 
 Type:
 
@@ -555,7 +712,7 @@ Type:
 
 Purpose:
 
-- show live Sparkle diagnostics and prove this is not theoretical
+- show live diagnostics and prove the behavior is observable
 
 ### Figure 8: Evidence table
 
@@ -609,7 +766,7 @@ Each section should be assembled from prepared inputs.
 - vendor terminology mapping
 - one short “what converges across vendors” paragraph
 
-### Inputs for Sparkle architecture
+### Inputs for implementation architecture
 
 - code references
 - small architecture figure
@@ -631,15 +788,15 @@ Each section should be assembled from prepared inputs.
 
 These are the details that prevent the article from feeling interchangeable with any other PTLAS post.
 
-Push these in aggressively:
+Use these only when they teach a concept, prove a claim, or expose the implementation gap:
 
-- Sparkle has a real partition planner already
-- Sparkle already packs per-instance PTLAS debug data into frame data
-- Sparkle already exposes PTLAS debug view modes
-- Sparkle already exports PTLAS smoke metadata and timings
-- Sparkle already distinguishes requested vs selected writer path
-- Sparkle already has backend-specific PTLAS service layers for D3D12 and Vulkan
-- Sparkle currently emits selective logical updates but still full-scene native write behavior
+- partition planning as the place where spatial ownership is decided
+- per-instance PTLAS debug data as proof that the engine can inspect partition state
+- PTLAS debug view modes as proof that the behavior is visible, not assumed
+- smoke metadata and timings as audit evidence
+- requested vs selected writer path as proof that policy and fallback can be inspected
+- backend-specific service layers as proof that API differences exist below the shared PTLAS model
+- selective logical updates plus broad native write behavior as the central implementation gap
 
 If those specifics disappear, the article becomes generic.
 
@@ -667,7 +824,7 @@ Recommended drafting order:
 1. build capture bundles
 2. draft the comparison tables
 3. draft the diagrams
-4. write section 5 `SparkleEngine today`
+4. write section 5 `Concrete implementation lens`
 5. write section 6 `The hard part`
 6. write sections 1-4
 7. write sections 7-8
@@ -675,7 +832,7 @@ Recommended drafting order:
 
 Reason:
 
-- the Sparkle sections are the most specific and should define the voice of the article
+- the implementation-evidence sections are the most specific and should define the voice of the article
 
 ## 14. Quality Gates
 
@@ -689,8 +846,8 @@ Before calling the article ready, check:
 
 ### Specificity gate
 
-- the article could not plausibly be rewritten by swapping out Sparkle for a generic engine name
-- screenshots, metrics, and code references are Sparkle-specific
+- concrete implementation details teach something a generic article could not
+- screenshots, metrics, and code references support reader understanding instead of praising the engine
 
 ### Evidence gate
 
@@ -711,6 +868,23 @@ Before calling the article ready, check:
 - good section rhythm
 - no series-only scaffolding
 
+### Narration gate
+
+- the article can be summarized as:
+  classic acceleration structures -> classic TLAS update problem -> PTLAS solution model -> implementation proof
+- no section feels like an unrelated observation
+- technical details appear only when they support the current step of the story
+- the reader always knows whether they are looking at baseline, problem, solution, or proof
+
+### Visual gate
+
+- every visualization answers one explicit reader question
+- if a visual answers more than one reader question, split it
+- no two visuals are used to prove the same point unless the second adds real evidence
+- each visual is introduced before it appears
+- visual introductions explain how to read the asset, not why the asset is impressive
+- unused widgets can stay in the repo, but should not appear in the live article unless they earn a distinct role
+
 ## 15. Suggested Deliverables Checklist
 
 - approved article title direction
@@ -720,7 +894,7 @@ Before calling the article ready, check:
 - all required JSON / CSV files extracted
 - BLAS / TLAS / PTLAS comparison table drafted
 - vendor terminology table drafted
-- Sparkle architecture diagram drafted
+- implementation architecture diagram drafted
 - PTLAS update model diagram drafted
 - article skeleton drafted
 - first article draft written

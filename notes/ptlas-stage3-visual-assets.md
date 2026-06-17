@@ -3,7 +3,7 @@
 Date: 2026-06-17
 Status: Draft 1
 Owner: Pawel + Codex
-Article: `What Changes When an Engine Moves From TLAS to PTLAS`
+Article: `Next Gen RT Acceleration Structure: PTLAS vs TLAS`
 Depends on:
 
 - `notes/ptlas-article-design-doc.md`
@@ -51,7 +51,235 @@ All visuals for this article should follow these rules:
 - stay compact
 - support a concrete section claim
 - use Sparkle terminology where appropriate
-- avoid generic “ray tracing pretty picture” filler
+- avoid generic "ray tracing pretty picture" filler
+
+### 5.A Visual Contract For The Live Article
+
+Every visual in the live article must answer one reader question.
+
+If the visual does not answer a distinct question, remove it from the article and keep it only as a future asset candidate.
+
+Current live visual contract:
+
+| Visual | Reader question it answers | Keep? |
+|---|---|---|
+| `rt-as-baseline.html` | What does BLAS own, and what does TLAS own? | Yes |
+| `rt-as-update-modes.html` | What is the classic rebuild vs update/refit tradeoff? | Yes |
+| `ptlas-structure-slide.html` | What is PTLAS structurally? | Yes |
+| `interactive-ptlas-domino-field.html` | What behavior do we want: broad world, local hot update region? | Yes |
+| `ptlas-partition-policy.html` | Which update policy should moving instances use: local partition, global partition, or hybrid? | Yes |
+| `ptlas-cpu-gpu-split.html` | Who prepares update data and who executes native PTLAS work? | Yes |
+| Sparkle architecture Mermaid | Where can Sparkle preserve or lose selectivity? | Yes |
+| `interactive-ptlas-compare.html` | Redundant with baseline + problem statement in current draft | Not in live article |
+| `interactive-ptlas-movement.html` | Redundant with domino field + CPU/GPU split in current draft | Not in live article |
+
+Caption rule:
+
+- introduce each visual before it appears
+- the introduction should say how to read it, not apologize for it
+- avoid meta phrasing such as "this visual has one job" in the final article
+- prefer reader-facing phrasing such as `Read this figure as...`
+
+Simplicity rule:
+
+- no more than one major visual should appear before the reader knows why they need it
+- do not stack multiple visuals to prove the same idea
+- a table counts as a visual if it is doing explanatory work
+- avoid legends, metric cards, overlay labels, and caption blocks unless they remove more confusion than they add
+- prefer one sentence before a visual and one sentence after it over surrounding it with explanatory scaffolding
+
+## 5.0 Required Opening Baseline: BLAS / TLAS Update Vocabulary
+
+Before the PTLAS structure slide, the article should show two bite-size classic acceleration-structure visuals.
+
+Purpose:
+
+- establish BLAS and TLAS ownership before PTLAS appears
+- give update/refit and rebuild their own focused explanation
+- make the TLAS vs PTLAS contrast understandable without requiring readers to reconstruct the baseline from memory
+- keep the later PTLAS explanation focused on the delta rather than backfilling terminology
+
+Required contents for `rt-as-baseline.html`:
+
+- BLAS as geometry acceleration
+- TLAS as instance acceleration
+- instance records as transform + BLAS reference
+
+Required contents for `rt-as-update-modes.html`:
+
+- update/refit as preserving the existing structure shape where possible
+- rebuild as reconstructing the structure more fully
+- the tradeoff: update/refit can reduce build work, rebuild can preserve structure quality
+- the limit: neither choice makes classic TLAS partition-local
+
+Current live implementation:
+
+- `layouts/shortcodes/rt-as-baseline.html`
+- `layouts/shortcodes/rt-as-update-modes.html`
+- article placement: immediately after `First, The Classic TLAS Baseline`
+
+Style requirements:
+
+- technical and compact
+- no beginner-friendly cartoon treatment
+- explicitly label this as the comparison point for PTLAS
+- one reader question per visual
+
+## 5.1 Required Opening Slide: PTLAS Structure Overview
+
+The article should start with a clean PTLAS structure slide before the animated domino field.
+
+Purpose:
+
+- establish what PTLAS is structurally before showing why it matters dynamically
+- give the audience a shared reference for partitions, instance-index pool, indirect operations, BLAS reuse, and the global partition
+- make the rest of the article easier to narrate because we can point back to one stable diagram
+
+Required contents:
+
+- title: `Partitioned Top Level Acceleration Structure`
+- left side: compact rules of the model
+- right side: structure diagram showing geometry BLAS references, instance records, partitions, optional global partition, and the top-level structure
+- explicit note that PTLAS changes top-level maintenance, not shader-facing traversal intent
+
+Current live implementation:
+
+- `layouts/shortcodes/ptlas-structure-slide.html`
+- article placement: immediately after the thesis intro and before `Read The Picture First`
+
+Important label rule:
+
+- do not use `BLAS payload`
+- use `Geometry BLAS`, `BLAS reference`, or `instance records: transform + partition index + BLAS reference`
+
+Style requirements:
+
+- modern technical-slide look
+- elegant and readable, not toy-like
+- avoid excessive color; use blue for structure and green only for the update-model cue
+- preserve enough resemblance to vendor PTLAS diagrams that rendering engineers immediately recognize the model
+- keep this asset structure-only; do not add CPU/GPU responsibilities here
+
+## 5.1.1 Separate CPU / GPU Responsibility Split
+
+The CPU/GPU responsibility split should be a separate visual, not part of the opening structure slide.
+
+Reason:
+
+- the opening slide should answer "what is PTLAS structurally?"
+- the responsibility split should answer "who prepares and executes the update work?"
+- combining both made the opening visual too dense and harder to narrate
+
+Current live implementation:
+
+- `layouts/shortcodes/ptlas-cpu-gpu-split.html`
+- article placement: after the conceptual PTLAS update-model claim, before the movement widget
+
+Responsibility split to show:
+
+- CPU / engine policy:
+  feature detection, backend selection, partition scheme, sizing, persistent PTLAS buffers, descriptor setup, command recording, and synchronization policy
+- CPU or GPU:
+  changed-instance detection, partition assignment, local-vs-global partition policy for dynamic objects, sparse write-record generation, and indirect operation-count updates
+- GPU / native execution:
+  optional compute-side sparse update generation, compacting changed records, incrementing operation counts, executing the PTLAS build/update command, and tracing through the resulting top-level structure
+
+Important nuance:
+
+- PTLAS is often described as GPU-driven because per-frame operation data can be generated and consumed on the device without host synchronization
+- that does not mean the CPU disappears
+- the clean mental model is CPU-managed setup plus optional CPU/GPU sparse-update preparation plus GPU-executed native build/update work
+
+## 5.2 Reference Visual Direction
+
+One especially strong PTLAS visual pattern is the wide aerial partition-field view used in vendor samples:
+
+- a large scene seen from above or at a shallow angle
+- partitions visible as large colored ground tiles
+- only touched or updated regions saturated strongly
+- moving objects or movement trails visible on top of the partition field
+- the image explaining update locality before the reader reads the caption
+
+Why this matters:
+
+- it makes the PTLAS value obvious immediately
+- it shows spatial locality instead of only talking about it
+- it scales better for presentation and narration than a close-up debug crop
+
+For this article, at least one major Sparkle visual should aim for this exact feel:
+
+- wide camera
+- partition coloring
+- clear active update region
+- visible object motion or movement trail
+- enough contrast that a reader can say "only this area is hot" in one glance
+
+### 5.3 Live interactive visual rule
+
+The first interactive PTLAS visual must be understandable before the reader knows the API details.
+
+Required reading order:
+
+1. show the large partitioned board first
+2. show the local moving/toppling set second
+3. show the saturated PTLAS update cells last
+
+Avoid:
+
+- starting with abstract policy names such as "global partition" before the reader understands the scene
+- tiny active regions that disappear inside the perspective view
+- excessive sky or empty canvas space
+- metric cards that clip or become the main thing the reader notices
+- labels that require the reader to already understand PTLAS terminology
+
+Preferred widget behavior:
+
+- use numbered step buttons with action-oriented labels
+- make the board fill most of the frame
+- keep domino paths visible even when no update is active
+- use bright moving-instance markers during playback
+- use saturated magenta or similarly unmistakable color only for updated partitions
+- include a short caption that says exactly what the current state proves
+
+Current live article implementation:
+
+- `layouts/shortcodes/interactive-ptlas-domino-field.html`
+- article placement: immediately after `Read The Picture First`
+- purpose: make the NVIDIA-style "broad world, local update" model obvious before the article enters Sparkle-specific architecture
+
+### 5.4 Domino Sample Policy Tradeoff
+
+The domino field should be followed by one compact policy visual.
+
+Purpose:
+
+- show that PTLAS is a policy space, not one automatic update behavior
+- explain why a dynamic instance may either remain in its local partition or move to the global partition
+- make the trace-performance vs update-performance tradeoff explicit
+
+Current live implementation:
+
+- `layouts/shortcodes/ptlas-partition-policy.html`
+- article placement: immediately after `interactive-ptlas-domino-field.html`
+
+Required modes:
+
+- `Update local partition`
+  - instance remains in its original partition
+  - best trace performance
+  - update may be expensive when the partition contains many instances
+- `Move dynamic to global`
+  - moving instances go to the global partition, then return when stable
+  - faster update behavior
+  - slightly worse trace performance because spatial coherence is weaker
+- `Hybrid by distance`
+  - nearby partitions stay local
+  - far partitions route movers to global
+  - `mode change distance` is the threshold that decides where the behavior flips
+
+Narration line:
+
+`local partition update = slower updates, cleaner tracing; global partition = faster updates, less spatial coherence; hybrid chooses where that tradeoff changes`
 
 ## 6. Deliverable 1: BLAS / TLAS / PTLAS Comparison Table
 
@@ -186,11 +414,20 @@ flowchart LR
 - it reinforces the article thesis
 - it is specific to update behavior, not generic RT education
 
+### Companion real-scene visual
+
+This diagram should ideally be paired with one strong Sparkle capture that has the same explanatory effect as the wide NVIDIA-style PTLAS partition visualization:
+
+- large tiled partition field
+- one localized active region
+- moving objects or movement trail over the field
+- visually obvious "broad world, local update"
+
 ## 8. Deliverable 3: Sparkle Code-Path / Architecture Diagram
 
 ### Purpose
 
-This is the article’s most important Sparkle-specific systems figure.
+This is the article's most important Sparkle-specific systems figure.
 
 ### Best article location
 
@@ -270,14 +507,14 @@ flowchart LR
 
 - it proves the article is about a real engine
 - it clarifies where the architecture is already strong
-- it makes the “last mile” problem visually obvious
+- it makes the "last mile" problem visually obvious
 
 ## 9. Deliverable 4: Classic TLAS vs PTLAS Evidence Table
 
 ### Purpose
 
 This is the proof table.
-It ties the article’s claims to real captures and metrics.
+It ties the article's claims to real captures and metrics.
 
 ### Best article location
 
@@ -315,6 +552,15 @@ It ties the article’s claims to real captures and metrics.
 If Stage 2 yields stronger D3D12 evidence than Vulkan, be explicit.
 Do not pretend parity if one backend has more mature proof than the other.
 
+### Strong visual pairing
+
+This evidence table becomes much stronger if one of the adjacent images is a wide partition-field screenshot rather than only a close-up debug visualization.
+
+Best pairing:
+
+- wide partition-field image for intuition
+- evidence table for proof
+
 ## 10. Optional Supporting Table: Vendor Terminology Map
 
 ### Purpose
@@ -342,7 +588,7 @@ This table is optional but likely useful.
 
 ### Purpose
 
-Make the article’s hardest point instantly understandable.
+Make the article's hardest point instantly understandable.
 
 ### Simple format
 

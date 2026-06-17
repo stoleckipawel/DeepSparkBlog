@@ -1,0 +1,262 @@
+{{/* Interactive PTLAS vs TLAS update-scope comparison */}}
+<div class="interactive-widget" id="ptlas-compare-widget">
+  <div class="widget-body">
+    <div class="ptlas-compare-head">
+      <div class="ptlas-compare-title">Update Scope Explorer</div>
+      <div class="ptlas-compare-sub">Click a scenario below. Orange or pink marks the object that changed. Blue marks PTLAS partitions that become relevant. The comparison is about how much top-level work each model wants to touch.</div>
+    </div>
+
+    <div class="widget-toolbar">
+      <div class="widget-toolbar-left">
+        <button class="widget-pill ptlas-compare-btn ptlas-compare-btn-active" data-scenario="0" onclick="ptlasCompareSetScenario(0)">One moving car</button>
+        <button class="widget-pill ptlas-compare-btn" data-scenario="1" onclick="ptlasCompareSetScenario(1)">Small local crowd</button>
+        <button class="widget-pill ptlas-compare-btn" data-scenario="2" onclick="ptlasCompareSetScenario(2)">Object crosses partition</button>
+      </div>
+      <div class="widget-toolbar-right">
+        <button class="widget-pill" onclick="ptlasCompareReplay()">Replay animation</button>
+      </div>
+    </div>
+
+    <div class="ptlas-compare-story" id="ptlas-compare-story"></div>
+
+    <div class="ptlas-compare-steps">
+      <div class="ptlas-compare-step" id="ptlas-compare-step-0">1. scene change happens</div>
+      <div class="ptlas-compare-step" id="ptlas-compare-step-1">2. classic TLAS work stays broad</div>
+      <div class="ptlas-compare-step" id="ptlas-compare-step-2">3. PTLAS can stay local</div>
+    </div>
+
+    <div class="ptlas-compare-legend">
+      <span><i class="ptlas-swatch ptlas-swatch--changed"></i> changed instance(s)</span>
+      <span><i class="ptlas-swatch ptlas-swatch--touched"></i> PTLAS partitions touched</span>
+      <span><i class="ptlas-swatch ptlas-swatch--cross"></i> partition crossing / migration case</span>
+      <span><i class="ptlas-swatch ptlas-swatch--broad"></i> broad classic TLAS work footprint</span>
+    </div>
+
+    <div class="ptlas-compare-grid">
+      <div class="ptlas-compare-panel">
+        <div class="ptlas-compare-label">Classic TLAS</div>
+        <svg id="ptlas-compare-tlas" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="ptlas-compare-note" id="ptlas-compare-tlas-note"></div>
+      </div>
+      <div class="ptlas-compare-panel">
+        <div class="ptlas-compare-label">PTLAS</div>
+        <svg id="ptlas-compare-ptlas" viewBox="0 0 360 220" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="ptlas-compare-note" id="ptlas-compare-ptlas-note"></div>
+      </div>
+    </div>
+
+    <div class="ptlas-compare-metrics" id="ptlas-compare-metrics"></div>
+  </div>
+</div>
+
+<style>
+.ptlas-compare-head{margin-bottom:.8em}
+.ptlas-compare-title{font-weight:800;font-size:.98em}
+.ptlas-compare-sub{font-size:.82em;opacity:.72;line-height:1.45;margin-top:.15em}
+.ptlas-compare-story{margin:.7em 0 .75em;padding:.65em .8em;border-radius:.65rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:rgba(255,255,255,.42);font-size:.82em;line-height:1.55}
+:is(.dark,.scheme-congo) .ptlas-compare-story{border-color:var(--color-neutral-700);background:rgba(255,255,255,.02)}
+.ptlas-compare-steps{display:flex;flex-wrap:wrap;gap:.55em;margin:0 0 .75em}
+.ptlas-compare-step{font-size:.75em;padding:.38em .65em;border-radius:999px;border:1px solid var(--color-neutral-200,#e5e5e5);background:rgba(255,255,255,.38);opacity:.55;transition:all .2s ease}
+:is(.dark,.scheme-congo) .ptlas-compare-step{border-color:var(--color-neutral-700);background:rgba(255,255,255,.02)}
+.ptlas-compare-step-active{opacity:1;border-color:var(--ds-info);color:var(--ds-info);font-weight:700}
+.ptlas-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1em;align-items:start}
+.ptlas-compare-panel{padding:.75em;border-radius:.7rem;background:rgba(255,255,255,.45);border:1px solid var(--color-neutral-200,#e5e5e5)}
+:is(.dark,.scheme-congo) .ptlas-compare-panel{background:rgba(255,255,255,.02);border-color:var(--color-neutral-700)}
+.ptlas-compare-label{font-weight:700;font-size:.82em;letter-spacing:.02em;text-transform:uppercase;opacity:.78;margin-bottom:.45em}
+.ptlas-compare-note{font-size:.8em;line-height:1.5;opacity:.78;margin-top:.45em;min-height:2.6em}
+.ptlas-compare-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65em;margin-top:.9em}
+.ptlas-compare-metric{padding:.65em .75em;border-radius:.65rem;border:1px solid var(--color-neutral-200,#e5e5e5);background:rgba(255,255,255,.4)}
+:is(.dark,.scheme-congo) .ptlas-compare-metric{border-color:var(--color-neutral-700);background:rgba(255,255,255,.02)}
+.ptlas-compare-metric-k{font-size:.72em;text-transform:uppercase;letter-spacing:.04em;opacity:.62}
+.ptlas-compare-metric-v{font-size:.92em;font-weight:800;margin-top:.15em}
+.ptlas-compare-btn-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:700}
+.ptlas-compare-legend{display:flex;flex-wrap:wrap;gap:.8em 1.1em;font-size:.74em;opacity:.78;margin:.1em 0 .8em}
+.ptlas-compare-legend span{display:inline-flex;align-items:center;gap:.4em}
+.ptlas-swatch{display:inline-block;width:.82em;height:.82em;border-radius:.2em;border:1px solid rgba(15,23,42,.18)}
+.ptlas-swatch--changed{background:rgba(245,158,11,.88)}
+.ptlas-swatch--touched{background:rgba(59,130,246,.24)}
+.ptlas-swatch--cross{background:rgba(244,114,182,.88)}
+.ptlas-swatch--broad{background:rgba(239,68,68,.20)}
+@media (max-width: 900px){
+  .ptlas-compare-grid{grid-template-columns:1fr}
+  .ptlas-compare-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+
+<script>
+(function(){
+const rootId = "ptlas-compare-widget";
+let activeScenario = 0;
+let compareTimers = [];
+let comparePhase = 0;
+const scenarios = [
+  {
+    name:"One moving car",
+    story:"Imagine a city block where a single dynamic car updates its transform this frame. The object change is tiny. The question is whether the top-level maintenance cost stays tiny too.",
+    changed:[[1,1]],
+    touched:[[0,0]],
+    tlasNote:"Only one object changed, but the maintenance story still reads like broad scene-level top work.",
+    ptlasNote:"One moved object can stay localized to one partition and one small native update set.",
+    metrics:{changedInstances:"1 instance",tlasWork:"scene-wide top work",ptlasPartitions:"1 partition",ptlasNative:"1 local update set"}
+  },
+  {
+    name:"Small local crowd",
+    story:"Now a small cluster of nearby dynamic objects updates together, like a local crowd or a pack of moving props. The scene change is still local, just slightly larger.",
+    changed:[[1,1],[1,2],[2,1],[2,2]],
+    touched:[[0,0]],
+    tlasNote:"The change is still spatially local, but classic TLAS does not naturally turn that into local top-level maintenance.",
+    ptlasNote:"A compact cluster can remain localized to one partition, which is exactly the kind of update PTLAS is meant to express well.",
+    metrics:{changedInstances:"4 instances",tlasWork:"scene-wide top work",ptlasPartitions:"1 partition",ptlasNative:"1 partition-local update set"}
+  },
+  {
+    name:"Object crosses partition",
+    story:"This is the first truly PTLAS-specific case: one object does not just move, it crosses a partition boundary. Now partition ownership itself changes.",
+    changed:[[1,1]],
+    touched:[[0,0],[1,0]],
+    crossing:[[1,1]],
+    tlasNote:"Classic TLAS still sees a scene-level top structure that wants broad maintenance when membership changes.",
+    ptlasNote:"The interesting PTLAS case is not just motion, but motion that changes partition membership and touches more than one partition.",
+    metrics:{changedInstances:"1 instance",tlasWork:"scene-wide top work",ptlasPartitions:"2 partitions",ptlasNative:"migration + local updates"}
+  }
+];
+
+function clearCompareTimers(){
+  compareTimers.forEach(t => clearTimeout(t));
+  compareTimers = [];
+}
+
+function setComparePhase(phase){
+  comparePhase = phase;
+  for(let i=0;i<3;i++){
+    const el = document.getElementById(`ptlas-compare-step-${i}`);
+    if(el) el.classList.toggle("ptlas-compare-step-active", i === phase);
+  }
+  renderScenario(activeScenario, false);
+}
+
+function buildSvg(svgId, mode, scenario){
+  const svg = document.getElementById(svgId);
+  if(!svg) return;
+  svg.innerHTML = "";
+
+  const width = 360, height = 220;
+  const cellW = 34, cellH = 34, startX = 24, startY = 28;
+  const cols = 8, rows = 4;
+
+  if(mode === "ptlas"){
+    for(let px=0; px<2; px++){
+      for(let py=0; py<2; py++){
+        const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+        rect.setAttribute("x", startX + px * (cellW*4));
+        rect.setAttribute("y", startY + py * (cellH*2));
+        rect.setAttribute("width", cellW*4);
+        rect.setAttribute("height", cellH*2);
+        rect.setAttribute("rx","10");
+        rect.setAttribute("fill","rgba(59,130,246,.06)");
+        rect.setAttribute("stroke","rgba(59,130,246,.18)");
+        svg.appendChild(rect);
+      }
+    }
+  }
+
+  for(let y=0; y<rows; y++){
+    for(let x=0; x<cols; x++){
+      const isChanged = scenario.changed.some(c => c[0]===x && c[1]===y);
+      const partX = Math.floor(x/4), partY = Math.floor(y/2);
+      const touched = scenario.touched.some(c => c[0]===partX && c[1]===partY);
+      const isCross = (scenario.crossing||[]).some(c => c[0]===x && c[1]===y);
+
+      const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x", startX + x*cellW + 3);
+      r.setAttribute("y", startY + y*cellH + 3);
+      r.setAttribute("width", cellW - 6);
+      r.setAttribute("height", cellH - 6);
+      r.setAttribute("rx","7");
+
+      let fill = "rgba(163,163,163,.22)";
+      let stroke = "rgba(140,140,140,.35)";
+      if(mode === "tlas"){
+        if(isChanged && comparePhase >= 0){ fill = "rgba(245,158,11,.88)"; stroke = "rgba(180,83,9,.95)"; }
+        if(comparePhase >= 1 && !isChanged){ fill = "rgba(239,68,68,.20)"; stroke = "rgba(220,38,38,.32)"; }
+      } else {
+        if(comparePhase >= 2){
+          if(isChanged){ fill = isCross ? "rgba(244,114,182,.88)" : "rgba(34,197,94,.88)"; stroke = isCross ? "rgba(190,24,93,.95)" : "rgba(21,128,61,.95)"; }
+          else if(touched){ fill = "rgba(59,130,246,.24)"; stroke = "rgba(37,99,235,.45)"; }
+        }
+      }
+      r.setAttribute("fill", fill);
+      r.setAttribute("stroke", stroke);
+      svg.appendChild(r);
+    }
+  }
+
+  const banner = document.createElementNS("http://www.w3.org/2000/svg","rect");
+  banner.setAttribute("x","16");
+  banner.setAttribute("y","178");
+  banner.setAttribute("width","328");
+  banner.setAttribute("height","28");
+  banner.setAttribute("rx","8");
+  const bannerVisible = (mode==="tlas" && comparePhase >= 1) || (mode==="ptlas" && comparePhase >= 2);
+  banner.setAttribute("fill", mode==="tlas" ? "rgba(239,68,68,.10)" : "rgba(34,197,94,.10)");
+  banner.setAttribute("stroke", mode==="tlas" ? "rgba(239,68,68,.22)" : "rgba(34,197,94,.22)");
+  banner.setAttribute("opacity", bannerVisible ? "1" : "0");
+  svg.appendChild(banner);
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+  text.setAttribute("x","28");
+  text.setAttribute("y","196");
+  text.setAttribute("fill", mode==="tlas" ? "var(--ds-danger)" : "var(--ds-success)");
+  text.setAttribute("style","font:600 12px ui-monospace,monospace");
+  text.textContent = mode==="tlas" ? "top-level maintenance still behaves broadly" : "top-level maintenance can stay localized";
+  text.setAttribute("opacity", bannerVisible ? "1" : "0");
+  svg.appendChild(text);
+}
+
+function renderMetrics(s){
+  const el = document.getElementById("ptlas-compare-metrics");
+  if(!el) return;
+  el.innerHTML = [
+    ["changed instances", s.metrics.changedInstances],
+    ["classic TLAS", s.metrics.tlasWork],
+    ["PTLAS touched", s.metrics.ptlasPartitions],
+    ["PTLAS native path", s.metrics.ptlasNative]
+  ].map(([k,v]) => `<div class="ptlas-compare-metric"><div class="ptlas-compare-metric-k">${k}</div><div class="ptlas-compare-metric-v">${v}</div></div>`).join("");
+}
+
+function replayCompare(){
+  clearCompareTimers();
+  comparePhase = 0;
+  renderScenario(activeScenario, false);
+  compareTimers.push(setTimeout(() => setComparePhase(0), 50));
+  compareTimers.push(setTimeout(() => setComparePhase(1), 950));
+  compareTimers.push(setTimeout(() => setComparePhase(2), 1900));
+}
+
+function renderScenario(idx, autoplay=true){
+  activeScenario = idx;
+  const s = scenarios[idx];
+  document.querySelectorAll('#'+rootId+' .ptlas-compare-btn').forEach(btn => {
+    btn.classList.toggle('ptlas-compare-btn-active', parseInt(btn.dataset.scenario,10) === idx);
+  });
+  document.getElementById("ptlas-compare-story").textContent = s.story;
+  buildSvg("ptlas-compare-tlas","tlas",s);
+  buildSvg("ptlas-compare-ptlas","ptlas",s);
+  document.getElementById("ptlas-compare-tlas-note").textContent = s.tlasNote;
+  document.getElementById("ptlas-compare-ptlas-note").textContent = s.ptlasNote;
+  renderMetrics(s);
+  if(autoplay) replayCompare();
+}
+
+window.ptlasCompareSetScenario = renderScenario;
+window.ptlasCompareReplay = replayCompare;
+
+const el = document.getElementById(rootId);
+const obs = new IntersectionObserver(entries => {
+  if(entries[0].isIntersecting){
+    obs.disconnect();
+    renderScenario(0);
+  }
+},{rootMargin:'200px'});
+if(el) obs.observe(el);
+})();
+</script>
