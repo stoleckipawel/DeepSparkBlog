@@ -34,16 +34,16 @@ Rebuild and refit optimize different costs. Rebuild gives the builder freedom to
 
 ## Related Work And API Context
 
-The API surface differs by backend, but the comparison needs only three questions: what data names the top-level structure, what data names changed instances, and what data lets the renderer issue update commands without rewriting the whole scene.
+Backend names differ, but the article only needs the concepts that affect engine behavior.
 
-| Article term | Vulkan-side model | D3D12-side model | Role in the article |
-|---|---|---|---|
-| Classic TLAS | top-level acceleration structure | top-level RTAS / TLAS | Baseline scene-instance structure |
-| PTLAS | partitioned acceleration structure | partitioned top-level RTAS / PTLAS | Top-level state split into maintained partitions |
-| Partition | partition in the top-level structure | partition in the top-level structure | Spatial or policy-owned maintenance unit |
-| Global partition | global partition | global partition | Dynamic bucket for instances that should not rewrite many local partitions |
-| Instance operation | write/update instance operation | write/update instance operation | Sparse description of changed instance records |
-| Indirect update data | device-authored operation arguments | GPU-authored operation arguments | Lets simulation or compute generate update work on the GPU |
+| Concept | Meaning in this article |
+|---|---|
+| Classic TLAS | One top-level instance structure maintained as a broad unit. |
+| PTLAS | A top-level structure whose maintenance can be expressed through partitions. |
+| Partition | A spatial or policy-owned unit of top-level maintenance. |
+| Global partition | A dynamic bucket for moving instances that should not rewrite many local partitions. |
+| Instance operation | A compact write/update description for changed instance records. |
+| Indirect update data | GPU-authored work description for top-level update commands. |
 
 ## Problem Statement
 
@@ -77,15 +77,26 @@ Good measurements separate physics, sparse instance-update generation, and top-l
 
 ### Evidence Snapshot
 
-| Capture field | Classic TLAS | PTLAS |
-|---|---:|---:|
-| Scene instances | about 1.38M workload objects | about 1.38M workload objects |
-| Changed instances | capture needed | capture needed |
-| Maintained top-level region | full TLAS | touched partitions: capture needed |
-| Top-level update time | capture needed | capture needed |
-| Scratch or memory | capture needed | capture needed |
+The measured scene contains `169,231` dynamic domino instances, `1,220,175` static board objects, and `1,389,406` instances total. The PTLAS claim to test is narrow: when only part of the scene changes, top-level maintenance should be able to follow that smaller changed set.
 
-Rows marked `capture needed` define the engine evidence required before any performance claim is made.
+| Claim to test | Measurement from the sample | Interpretation |
+|---|---|---|
+| Scene scale and changed work can be different by orders of magnitude. | High-motion PTLAS bands touch about `15.6k` changed instances, around `1.12%` of the `1.389M` instance scene. Low-motion bands are about `1.7k`, around `0.12%`. | The workload has the shape PTLAS is built for: a large world with a much smaller moving set. |
+| PTLAS update work should fall as motion becomes sparse. | Across local, global, and hybrid policies, top-level update average drops from about `1.31 ms` in high motion to about `0.75 ms` in low motion. | In this sample, update time follows the moving set over time. |
+| Policy affects traversal-side cost too. | Average render time differs by policy: local `1.270 ms`, hybrid `1.291 ms`, global `1.407 ms`. | Update timing alone is incomplete; partition policy must be judged with render timing beside it. |
+| PTLAS is not a free-memory replacement for TLAS. | TLAS uses `285.68 MB` AS memory and `103.97 MB` scratch. PTLAS uses `320.18 MB` AS memory and `110.24 MB` scratch. | PTLAS changes maintenance granularity, while memory and scratch remain part of the tradeoff. |
+
+| PTLAS policy | High motion update | Mid motion update | Low motion update |
+|---|---:|---:|---:|
+| Local partition | `1.320 ms` at `15,648` changed | `1.053 ms` at `9,358` changed | `0.751 ms` at `1,707` changed |
+| Global partition | `1.302 ms` at `15,584` changed | `1.119 ms` at `9,468` changed | `0.738 ms` at `1,721` changed |
+| Hybrid distance `100.000` | `1.313 ms` at `15,609` changed | `1.102 ms` at `9,490` changed | `0.752 ms` at `1,765` changed |
+
+From high to low motion, the PTLAS update average drops by about `43%` in all three policies. That is the workload shape worth measuring: when motion becomes sparse over time, PTLAS update cost can track the moving set instead of being discussed only as a function of full scene size.
+
+The run measures changed instances, update time, render time, memory, and scratch. It does not yet report touched partitions, rewritten instances, global-partition population, or native operation count.
+
+The classic TLAS refit baseline remains relevant, but not as a headline timing comparison from this dataset. Its captured update range was narrow, `0.656-0.706 ms`, over a much smaller changed-instance window of `4,011-5,084`. A direct TLAS-versus-PTLAS timing claim needs matched motion windows and backend command-scope counters.
 
 ## Update Policy Tradeoffs
 
@@ -105,21 +116,21 @@ The implementation path is easiest to audit as five boundaries. Each boundary ca
 
 Sparse update authoring can happen on the CPU or GPU. The boundary to verify is the native operation pack: changed-instance records and touched partitions either remain compact there, or the backend receives broad top-level writes.
 
-## Evidence And Current Limitations
+## Evidence And Remaining Gaps
 
-The current evidence separates engine-side planning from backend-visible commands. That distinction matters: an engine can count changed instances before it has proven that backend build/update commands are scoped to those instances and partitions.
+The measurements above cover the visible sample workload, update timings, render timings, memory, and scratch. They do not yet prove the exact scope of backend build/update commands.
 
-| Evidence checkpoint | Represented now | Still needs proof |
+| Evidence checkpoint | Covered here | Still missing |
 |---|---|---|
-| Frame strategy | Classic and partitioned paths can be selected and diagnosed. | Compare timings under the same scene and camera state. |
-| Partition planning | Local and global ownership can be reasoned about before backend work. | Export partition occupancy and migration counts per frame. |
-| Logical update stream | Dirty or moved instances can be counted before native packing. | Track rewritten-instance count beside changed-instance count. |
-| Native operation pack | Backend command packets are visible as a separate boundary. | Break down native op type, op count, and touched partitions. |
-| Smoke capture / overlay | PTLAS path, counts, and fallback state can be captured. | Store runtime config with every evidence bundle. |
+| Frame strategy | Classic TLAS refit and three PTLAS policies measured on one scene. | Repeat with engine captures and fixed camera paths. |
+| Partition planning | Local, global, and hybrid policy modes measured separately. | Export partition occupancy and migration counts per frame. |
+| Logical update stream | `Updated instances` measured beside update and render timings. | Track rewritten-instance count beside changed-instance count. |
+| Native operation pack | Identified as the next boundary to audit. | Break down native op type, op count, and touched partitions. |
+| Runtime evidence | Screenshots and CSV-backed averages exist for the sample. | Store runtime config with every engine evidence bundle. |
 
-The measurable limitation is backend command scope. Engine-side update records may be sparse while the backend packet still covers more top-level state than the changed instances and touched partitions require.
+The main missing number is backend command scope. Engine-side update records may be sparse while the backend packet still covers more top-level state than the changed instances and touched partitions require.
 
-Capture checklist:
+Measurement checklist:
 
 - changed-instance count
 - rewritten-instance count
@@ -131,17 +142,19 @@ Capture checklist:
 
 PTLAS shifts cost toward partition design. Smaller partitions can reduce the amount of maintained top-level state, but they also increase partition count and make overlap easier to create. Overlap matters because tracing still traverses spatial data; a partition layout that is cheap to update can be poor to trace.
 
-The global partition is the pressure valve for dynamic objects. It can reduce repeated local rewrites when motion is scattered, but it becomes less spatially coherent as it grows. A useful capture should report both touched local partitions and global-partition population.
+The global partition is the pressure valve for dynamic objects. It can reduce repeated local rewrites when motion is scattered, but it becomes less spatially coherent as it grows. A complete capture should report both touched local partitions and global-partition population.
 
 Memory and scratch should be read as part of the method, not as the headline. PTLAS may carry more structure metadata than a classic TLAS path. The comparison that matters is top-level update time relative to changed instances, touched partitions, and full-scene instance count.
 
 Timing numbers need those counts beside them. A lower update time with a much larger global partition may trade build cost for trace cost. A higher update time near the camera may be acceptable if it preserves better spatial grouping where rays are dense.
 
+The measured policy rows follow that rule. Their update timings fall as the moving set shrinks, but their render averages are not identical. That makes the policy choice a measurement problem, not a naming problem.
+
 ## Summary
 
 - TLAS remains one top-level instance acceleration structure.
 - PTLAS changes how top-level updates can be expressed: changed instances, touched partitions, and global dynamic movement.
-- The useful measurement is whether backend build/update commands are scoped to changed instances and touched partitions.
+- The final measurement is whether backend build/update commands are scoped to changed instances and touched partitions.
 
 ## Resources
 
