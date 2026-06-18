@@ -1,18 +1,18 @@
 ---
-title: "Next Gen RT Acceleration Structure: PTLAS vs TLAS"
+title: "PTLAS vs TLAS: Sparse Top-Level Updates in Large Ray-Traced Scenes"
 date: 2026-06-17
-lastmod: 2026-06-17
+lastmod: 2026-06-18
 draft: true
 authors: ["Pawel Stolecki"]
-description: "A peer-level PTLAS article about what changes when an engine moves from classic TLAS maintenance to partitioned top-level updates."
+description: "A peer-level comparison of classic TLAS rebuild/refit and PTLAS partitioned maintenance, grounded in a localized-motion sample workload."
 tags: ["rendering", "ray-tracing", "ptlas", "vulkan", "d3d12", "engine-architecture"]
 categories: ["analysis"]
-summary: "A compact comparison of classic TLAS rebuild/refit and PTLAS partitioned updates, focused on when localized scene changes can reduce top-level maintenance work."
+summary: "A compact comparison of classic TLAS rebuild/refit and PTLAS partitioned updates, focused on sparse motion, update cost, traversal cost, and remaining evidence gaps."
 showTableOfContents: false
 keywords: ["PTLAS", "TLAS", "BLAS", "ray tracing", "partitioned TLAS", "Vulkan", "D3D12", "NVAPI", "rendering engine"]
 ---
 
-Partitioned top-level acceleration structures change the maintenance unit of ray-tracing instance acceleration from one scene-wide top-level structure to partitions plus sparse instance updates. This article compares that model with classic TLAS rebuild/refit, shows the workload where the distinction matters, and states the evidence requirement directly: changed-instance and touched-partition counts need to be reflected in backend build/update commands, not stop at engine-side planning.
+Partitioned top-level acceleration structures change the maintenance unit of ray-tracing instance acceleration: from one scene-wide TLAS to partitioned top-level state plus sparse instance operations. This article compares that model with classic TLAS rebuild/refit, measures a localized-motion workload, and keeps the measurement boundary explicit: changed-instance counts are captured here, while touched partitions and native operation counts still need instrumentation.
 
 ## Introduction
 
@@ -26,30 +26,15 @@ BLAS and TLAS split ray-tracing acceleration by ownership. A BLAS is built from 
 
 {{< rt-as-baseline >}}
 
-A TLAS rebuild constructs the top-level structure from the current instance set. A TLAS update/refit reuses an update-capable previous structure and refreshes instance-side data, most often transforms and bounds.
-
-Rebuild and refit optimize different costs. Rebuild gives the builder freedom to improve top-level layout after broad change. Refit can reduce build work for transform-heavy motion, but repeated updates can preserve a layout that no longer matches the current scene as well.
+Classic TLAS maintenance is a cost-placement decision. Rebuild spends builder time to create a fresh top-level layout from the current instance set. Update/refit reuses an update-capable layout and refreshes instance data, usually transforms and bounds, but layout drift can move cost into traversal.
 
 {{< rt-as-update-modes >}}
 
-## Related Work And API Context
-
-Backend names differ, but the article only needs the concepts that affect engine behavior.
-
-| Concept | Meaning in this article |
-|---|---|
-| Classic TLAS | One top-level instance structure maintained as a broad unit. |
-| PTLAS | A top-level structure whose maintenance can be expressed through partitions. |
-| Partition | A spatial or policy-owned unit of top-level maintenance. |
-| Global partition | A dynamic bucket for moving instances that should not rewrite many local partitions. |
-| Instance operation | A compact write/update description for changed instance records. |
-| Indirect update data | GPU-authored work description for top-level update commands. |
-
 ## Problem Statement
 
-The granularity of scene change can be smaller than the granularity of classic TLAS maintenance.
+The target saving is top-level update work. If only a small moving set changes, the maintained top-level region should be closer to that moving set than to the full scene.
 
-The test is concrete: count how many instances changed, count how much top-level state was maintained, and compare both numbers to the full scene. If those counts stay close to scene size, the update path is correct but still coarse.
+That saving is only worth claiming with the other costs beside it: render time for traversal quality, memory and scratch for structure overhead, and backend command scope for submitted work. A sparse engine-side dirty list is not enough if the backend still updates a broad top-level region.
 
 ## Proposed Model
 
@@ -61,28 +46,20 @@ Instance records still reference BLAS objects, and rays still traverse a top-lev
 
 {{< ptlas-update-model >}}
 
-## Example Workload
+## Measurement Workload
 
-The sample workload is large enough to separate scene size from changed work: about 170k dynamic instances, about 1.2M static board objects, and a uniform 2D partition grid.
+The captured workload is large enough to separate scene size from changed work: `169,231` dynamic domino instances, `1,220,175` static board objects, `1,389,406` instances total, and a `50 x 50` partition grid.
 
-| Workload fact | Technical implication |
-|---|---|
-| Uniform 2D partition grid | Partition ownership is spatial and predictable. |
-| Saturated partition cells | The update region is smaller than the world. |
-| Moving instance set | Per-frame change starts as changed instance transforms. |
-| Updated instance count | Update cost should be read together with how much data changed. |
-| TLAS / PTLAS memory and scratch stats | PTLAS is a different maintenance model, not a free-memory replacement for TLAS. |
-
-Good measurements separate physics, sparse instance-update generation, and top-level update work.
+Scene size stays fixed while the toppling wave creates high, mid, and low changed-instance bands. The relevant measurements are top-level update time, render time, acceleration-structure memory, scratch memory, and the size of the moving set.
 
 ### Evidence Snapshot
 
-The measured scene contains `169,231` dynamic domino instances, `1,220,175` static board objects, and `1,389,406` instances total. The PTLAS claim to test is narrow: when only part of the scene changes, top-level maintenance should be able to follow that smaller changed set.
+The PTLAS claim tested here is narrow: when only part of the scene changes, top-level maintenance can be measured against the changed set instead of only against full scene size.
 
-| Claim to test | Measurement from the sample | Interpretation |
+| Claim to test | Captured result | Safe reading |
 |---|---|---|
-| Scene scale and changed work can be different by orders of magnitude. | High-motion PTLAS bands touch about `15.6k` changed instances, around `1.12%` of the `1.389M` instance scene. Low-motion bands are about `1.7k`, around `0.12%`. | The workload has the shape PTLAS is built for: a large world with a much smaller moving set. |
-| PTLAS update work should fall as motion becomes sparse. | Across local, global, and hybrid policies, top-level update average drops from about `1.31 ms` in high motion to about `0.75 ms` in low motion. | In this sample, update time follows the moving set over time. |
+| Scene scale and changed work can differ by orders of magnitude. | High-motion PTLAS bands report about `15.6k` changed instances, around `1.12%` of the `1.389M` instance scene. Low-motion bands report about `1.7k`, around `0.12%`. | The workload separates full scene size from moving-set size. |
+| PTLAS update work falls as motion becomes sparse in this run. | Across local, global, and hybrid policies, top-level update average drops from about `1.31 ms` in high motion to about `0.75 ms` in low motion. | Update time tracks the moving set over this capture window. |
 | Policy affects traversal-side cost too. | Average render time differs by policy: local `1.270 ms`, hybrid `1.291 ms`, global `1.407 ms`. | Update timing alone is incomplete; partition policy must be judged with render timing beside it. |
 | PTLAS is not a free-memory replacement for TLAS. | TLAS uses `285.68 MB` AS memory and `103.97 MB` scratch. PTLAS uses `320.18 MB` AS memory and `110.24 MB` scratch. | PTLAS changes maintenance granularity, while memory and scratch remain part of the tradeoff. |
 
@@ -92,9 +69,9 @@ The measured scene contains `169,231` dynamic domino instances, `1,220,175` stat
 | Global partition | `1.302 ms` at `15,584` changed | `1.119 ms` at `9,468` changed | `0.738 ms` at `1,721` changed |
 | Hybrid distance `100.000` | `1.313 ms` at `15,609` changed | `1.102 ms` at `9,490` changed | `0.752 ms` at `1,765` changed |
 
-From high to low motion, the PTLAS update average drops by about `43%` in all three policies. That is the workload shape worth measuring: when motion becomes sparse over time, PTLAS update cost can track the moving set instead of being discussed only as a function of full scene size.
+From high to low motion, the PTLAS update average drops by about `43%` in all three policies. The point is the relationship between moving-set size and top-level update time, not an unconditional TLAS-versus-PTLAS speed claim.
 
-The run measures changed instances, update time, render time, memory, and scratch. It does not yet report touched partitions, rewritten instances, global-partition population, or native operation count.
+This capture records changed instances, update time, render time, memory, and scratch. It does not report touched partitions, rewritten instances, global-partition population, or native operation count.
 
 The classic TLAS refit baseline remains relevant, but not as a headline timing comparison from this dataset. Its captured update range was narrow, `0.656-0.706 ms`, over a much smaller changed-instance window of `4,011-5,084`. A direct TLAS-versus-PTLAS timing claim needs matched motion windows and backend command-scope counters.
 
@@ -104,11 +81,11 @@ Partitioning adds a policy decision for moving instances: keep them in their spa
 
 {{< ptlas-partition-policy >}}
 
-An aggressive global-partition variant can move every dynamic instance from a touched partition into global. That reduces local partition rewrites, but the global partition may contain more than the currently moving set.
+In the global policy, moving instances are routed through one dynamic partition until they settle. That can reduce repeated local partition maintenance, but the global partition trades spatial grouping for a larger dynamic bucket.
 
 ## Implementation Method
 
-The implementation path is easiest to audit as five boundaries. Each boundary can keep work scoped to changed instances and touched partitions, or widen the work again.
+The implementation path is easiest to audit at the backend operation pack. Earlier stages can describe sparse work; that boundary decides whether submitted commands remain scoped to changed instances and touched partitions.
 
 {{< ptlas-implementation-pipeline >}}
 
@@ -128,7 +105,7 @@ The measurements above cover the visible sample workload, update timings, render
 | Native operation pack | Identified as the next boundary to audit. | Break down native op type, op count, and touched partitions. |
 | Runtime evidence | Screenshots and CSV-backed averages exist for the sample. | Store runtime config with every engine evidence bundle. |
 
-The main missing number is backend command scope. Engine-side update records may be sparse while the backend packet still covers more top-level state than the changed instances and touched partitions require.
+The missing evidence is backend command scope. Engine-side update records may be sparse while the backend packet still covers more top-level state than the changed instances and touched partitions require.
 
 Measurement checklist:
 
@@ -142,7 +119,7 @@ Measurement checklist:
 
 PTLAS shifts cost toward partition design. Smaller partitions can reduce the amount of maintained top-level state, but they also increase partition count and make overlap easier to create. Overlap matters because tracing still traverses spatial data; a partition layout that is cheap to update can be poor to trace.
 
-The global partition is the pressure valve for dynamic objects. It can reduce repeated local rewrites when motion is scattered, but it becomes less spatially coherent as it grows. A complete capture should report both touched local partitions and global-partition population.
+The global partition is the dynamic bucket for scattered movers. It can reduce repeated local rewrites when motion is scattered, but it becomes less spatially coherent as it grows. A complete capture should report both touched local partitions and global-partition population.
 
 Memory and scratch should be read as part of the method, not as the headline. PTLAS may carry more structure metadata than a classic TLAS path. The comparison that matters is top-level update time relative to changed instances, touched partitions, and full-scene instance count.
 
@@ -152,9 +129,9 @@ The measured policy rows follow that rule. Their update timings fall as the movi
 
 ## Summary
 
-- TLAS remains one top-level instance acceleration structure.
-- PTLAS changes how top-level updates can be expressed: changed instances, touched partitions, and global dynamic movement.
-- The final measurement is whether backend build/update commands are scoped to changed instances and touched partitions.
+- Classic TLAS rebuild/refit chooses how one scene-wide top-level structure is maintained.
+- PTLAS changes the maintenance vocabulary to changed instances, touched partitions, and optional global dynamic movement.
+- The remaining proof point is native command scope: operation type, operation count, touched partitions, and rewritten instances.
 
 ## Resources
 

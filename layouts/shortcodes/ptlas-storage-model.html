@@ -1,32 +1,57 @@
-{{/* Focused PTLAS storage model visual. */}}
-<section class="ptlas-storage" aria-label="PTLAS storage model">
+{{/* PTLAS structure model, laid out close to the NVIDIA PTLAS reference flow. */}}
+<section class="ptlas-storage" aria-label="PTLAS structure model">
   <div class="ptlas-storage-head">
     <div>
-      <div class="ptlas-storage-kicker">Storage model</div>
-      <h3>What PTLAS contains</h3>
+      <div class="ptlas-storage-kicker">Structure model</div>
+      <h3>How a partitioned top level is described</h3>
     </div>
-    <p>Instance records reference BLAS objects and map into partition-owned index ranges.</p>
+    <p>Instance definitions feed indirect operations; the resulting top level is organized through partitions and an instance-index pool.</p>
   </div>
 
   <div class="ptlas-storage-diagram" aria-hidden="true">
-    <div class="ptlas-storage-row blas">
-      <div class="ptlas-storage-box blas-box">BLAS</div>
-      <div class="ptlas-storage-box blas-box">BLAS</div>
-      <div class="ptlas-storage-box blas-box">BLAS</div>
+    <div class="ptlas-storage-blas-row">
+      <div class="ptlas-storage-box blas">BLAS</div>
+      <div class="ptlas-storage-box blas">BLAS</div>
+      <div class="ptlas-storage-box blas">BLAS</div>
     </div>
-    <div class="ptlas-storage-links">
-      <span></span><span></span><span></span>
+
+    <div class="ptlas-storage-boundary">
+      <span class="ptlas-storage-boundary-label">PTLAS</span>
+      <span class="ptlas-storage-note reuse">reuse BLAS</span>
+      <span class="ptlas-storage-note indices">rewrite index entries</span>
+      <span class="ptlas-storage-note parts">update selected partitions</span>
+
+      <div class="ptlas-storage-link-row blas-links">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="ptlas-storage-pool">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <strong>TLAS instance-index pool</strong>
+      </div>
+
+      <div class="ptlas-storage-link-row pool-links">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <div class="ptlas-storage-partitions">
+        <div class="ptlas-storage-box partition">TLAS partition A</div>
+        <div class="ptlas-storage-box partition">TLAS partition B</div>
+        <div class="ptlas-storage-box partition">TLAS partition C</div>
+        <div class="ptlas-storage-box partition global-role">TLAS partition<br><small>global role</small></div>
+      </div>
+
+      <div class="ptlas-storage-link-row tlas-links">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <div class="ptlas-storage-tlas">Top Level Acceleration Structure (TLAS)</div>
     </div>
-    <div class="ptlas-storage-pool">
-      <span></span><span></span><span></span><span></span><span></span><span></span>
-      <span></span><span></span><span></span><span></span><span></span><span></span>
-      <strong>instance-index pool</strong>
-    </div>
-    <div class="ptlas-storage-partitions">
-      <div class="ptlas-storage-box partition">partition A</div>
-      <div class="ptlas-storage-box partition">partition B</div>
-      <div class="ptlas-storage-box global">global partition</div>
-    </div>
+
+    <div class="ptlas-storage-submit-arrow" aria-hidden="true"></div>
+    <div class="ptlas-storage-ops">indirect build / update operations</div>
+    <div class="ptlas-storage-input">instance definitions: partition index + BLAS reference</div>
   </div>
 </section>
 
@@ -67,63 +92,93 @@
   line-height:1.5;
 }
 .ptlas-storage-diagram{
+  position:relative;
   border:1px solid color-mix(in srgb,currentColor 8%,transparent);
   border-radius:.55rem;
   background:rgba(var(--ds-info-rgb),.035);
-  padding:.9em;
+  padding:.9em 1em 1em;
+  overflow:hidden;
 }
 :is(.dark,.scheme-congo) .ptlas-storage-diagram{background:rgb(var(--color-neutral-900,11,11,14))}
-.ptlas-storage-row,
+.ptlas-storage-blas-row,
 .ptlas-storage-partitions{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:.8em;
 }
-.ptlas-storage-box{
-  border-radius:.45rem;
-  padding:.7em .8em;
+.ptlas-storage-box,
+.ptlas-storage-tlas,
+.ptlas-storage-ops,
+.ptlas-storage-input{
+  border-radius:.28rem;
+  padding:.62em .72em;
   text-align:center;
   font-family:ui-monospace,SFMono-Regular,monospace;
-  font-size:.82em;
+  font-size:.78em;
   font-weight:800;
 }
-.ptlas-storage-box.blas-box{
-  border:1px solid rgba(var(--ds-warn-rgb),.52);
-  background:rgba(var(--ds-warn-rgb),.12);
+.ptlas-storage-box.blas{
+  border:1px solid rgba(var(--ds-warn-rgb),.56);
+  background:rgba(var(--ds-warn-rgb),.11);
 }
-.ptlas-storage-box.partition{
-  border:1px solid rgba(var(--ds-info-rgb),.55);
-  background:rgba(var(--ds-info-rgb),.16);
+.ptlas-storage-boundary{
+  position:relative;
+  margin:.65em 0 .6em;
+  padding:0 .7em .72em;
+  border:1px dashed color-mix(in srgb,currentColor 20%,transparent);
+  border-radius:.45rem;
 }
-.ptlas-storage-box.global{
-  border:1px solid rgba(var(--ds-danger-rgb),.52);
-  background:rgba(var(--ds-danger-rgb),.12);
+.ptlas-storage-boundary-label{
+  position:absolute;
+  right:.8em;
+  bottom:.32em;
+  opacity:.58;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:1.05em;
+  font-weight:900;
+  letter-spacing:.06em;
 }
-.ptlas-storage-links{
+.ptlas-storage-note{
+  position:absolute;
+  right:1em;
+  max-width:11em;
+  opacity:.65;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.68em;
+  font-weight:800;
+  line-height:1.25;
+}
+.ptlas-storage-note.reuse{top:.9em}
+.ptlas-storage-note.indices{top:5.95em}
+.ptlas-storage-note.parts{bottom:4.35em}
+.ptlas-storage-link-row{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:.8em;
-  height:2.25em;
+  height:1.85em;
 }
-.ptlas-storage-links span{
+.ptlas-storage-link-row.blas-links{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.ptlas-storage-link-row span{
   position:relative;
 }
-.ptlas-storage-links span::before{
+.ptlas-storage-link-row span::before{
   content:"";
   position:absolute;
   left:50%;
-  top:.1em;
+  top:0;
   width:1px;
-  height:1.75em;
+  height:1.45em;
   background:color-mix(in srgb,currentColor 30%,transparent);
 }
-.ptlas-storage-links span::after{
+.ptlas-storage-link-row span::after{
   content:"";
   position:absolute;
-  left:calc(50% - .24em);
-  bottom:.18em;
-  width:.48em;
-  height:.48em;
+  left:calc(50% - .23em);
+  bottom:.2em;
+  width:.46em;
+  height:.46em;
   border-right:2px solid color-mix(in srgb,currentColor 35%,transparent);
   border-bottom:2px solid color-mix(in srgb,currentColor 35%,transparent);
   transform:rotate(45deg);
@@ -132,14 +187,14 @@
   position:relative;
   display:grid;
   grid-template-columns:repeat(12,1fr);
-  border:1px solid rgba(var(--ds-info-rgb),.36);
-  border-radius:.45rem;
+  border:1px solid rgba(var(--ds-info-rgb),.42);
+  border-radius:.28rem;
   overflow:hidden;
-  margin-bottom:1em;
+  margin-right:5.4em;
 }
 .ptlas-storage-pool span{
-  min-height:2.8em;
-  border-right:1px solid rgba(var(--ds-info-rgb),.26);
+  min-height:2.55em;
+  border-right:1px solid rgba(var(--ds-info-rgb),.25);
   background:rgba(var(--ds-info-rgb),.1);
 }
 .ptlas-storage-pool span:last-of-type{border-right:0}
@@ -149,12 +204,78 @@
   display:grid;
   place-items:center;
   font-family:ui-monospace,SFMono-Regular,monospace;
-  font-size:.8em;
+  font-size:.78em;
+}
+.ptlas-storage-partitions{
+  margin-right:5.4em;
+}
+.ptlas-storage-box.partition{
+  border:1px solid rgba(var(--ds-info-rgb),.55);
+  background:rgba(var(--ds-info-rgb),.16);
+}
+.ptlas-storage-box.global-role{
+  border-style:dashed;
+  border-color:rgba(var(--ds-info-rgb),.75);
+  background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.16),rgba(var(--ds-danger-rgb),.09));
+}
+.ptlas-storage-box small{
+  display:block;
+  margin-top:.15em;
+  opacity:.68;
+  font:inherit;
+  font-size:.82em;
+}
+.ptlas-storage-tlas{
+  margin-right:5.4em;
+  border:1px solid rgba(var(--ds-info-rgb),.62);
+  background:rgba(var(--ds-info-rgb),.22);
+}
+.ptlas-storage-submit-arrow{
+  position:relative;
+  height:1.7em;
+}
+.ptlas-storage-submit-arrow::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:.06em;
+  width:2px;
+  height:1.45em;
+  background:rgba(var(--ds-success-rgb),.85);
+}
+.ptlas-storage-submit-arrow::after{
+  content:"";
+  position:absolute;
+  left:calc(50% - .33em);
+  top:.02em;
+  width:.66em;
+  height:.66em;
+  border-left:2px solid rgba(var(--ds-success-rgb),.9);
+  border-top:2px solid rgba(var(--ds-success-rgb),.9);
+  transform:rotate(45deg);
+}
+.ptlas-storage-ops,
+.ptlas-storage-input{
+  width:min(36em,72%);
+  margin:0 auto .48em;
+  border:1px solid rgba(var(--ds-info-rgb),.34);
+  background:rgba(var(--ds-info-rgb),.08);
+}
+.ptlas-storage-input{
+  margin-bottom:0;
 }
 @media (max-width: 900px){
   .ptlas-storage-head,
-  .ptlas-storage-row,
+  .ptlas-storage-blas-row,
   .ptlas-storage-partitions{grid-template-columns:1fr}
-  .ptlas-storage-links{display:none}
+  .ptlas-storage-boundary{padding-top:.7em}
+  .ptlas-storage-link-row{display:none}
+  .ptlas-storage-pool,
+  .ptlas-storage-partitions,
+  .ptlas-storage-tlas{margin-right:0;margin-bottom:.65em}
+  .ptlas-storage-note,
+  .ptlas-storage-boundary-label{display:none}
+  .ptlas-storage-ops,
+  .ptlas-storage-input{width:100%}
 }
 </style>

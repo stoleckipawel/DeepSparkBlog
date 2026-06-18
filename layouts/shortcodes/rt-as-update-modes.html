@@ -3,38 +3,64 @@
   <div class="rt-update-head">
     <div>
       <div class="rt-update-kicker">Classic TLAS maintenance</div>
-      <h3>Instance motion usually means rebuild or refit.</h3>
+      <h3>Choose where the frame pays.</h3>
     </div>
-    <p>Both are valid. They optimize different parts of the frame.</p>
+    <p>Both paths maintain one scene-wide top-level structure. The difference is whether the frame pays in builder work or risks carrying layout drift into traversal.</p>
   </div>
 
   <div class="rt-update-grid">
     <article class="rt-update-card rebuild">
-      <span>Choice A</span>
+      <span>Fresh layout</span>
       <h4>Rebuild TLAS</h4>
-      <p>Build the top-level structure again from the current instance set.</p>
-      <ul>
-        <li>broad membership or layout change</li>
-        <li>checkpoint after accumulated refit drift</li>
-        <li>more top-level build work</li>
-      </ul>
+      <p>Build a new top-level layout from the current instance records.</p>
+      <dl>
+        <div>
+          <dt>Use when</dt>
+          <dd>Instance membership, BLAS references, flags, masks, or spatial distribution changed broadly.</dd>
+        </div>
+        <div>
+          <dt>Cost now</dt>
+          <dd>Higher build/update work and scratch pressure because the top level is constructed again.</dd>
+        </div>
+        <div>
+          <dt>Cost later</dt>
+          <dd>Traversal can recover from overlap or clustering created by previous motion.</dd>
+        </div>
+        <div>
+          <dt>Engine habit</dt>
+          <dd>Use as a checkpoint after many refits or after broad streaming / visibility changes.</dd>
+        </div>
+      </dl>
     </article>
 
     <article class="rt-update-card refit">
-      <span>Choice B</span>
+      <span>Reuse layout</span>
       <h4>Update / refit TLAS</h4>
-      <p>Reuse the previous structure and update changed instance bounds or transforms.</p>
-      <ul>
-        <li>transform-only movement</li>
-        <li>reuse previous top-level structure work</li>
-        <li>requires update-compatible build setup</li>
-      </ul>
+      <p>Keep the previous top-level layout and refresh compatible instance data.</p>
+      <dl>
+        <div>
+          <dt>Use when</dt>
+          <dd>The instance set stays compatible and most changes are transforms or bounds.</dd>
+        </div>
+        <div>
+          <dt>Cost now</dt>
+          <dd>Lower builder work because the previous top-level layout is reused.</dd>
+        </div>
+        <div>
+          <dt>Cost later</dt>
+          <dd>Traversal can degrade if moved instances no longer match the preserved layout.</dd>
+        </div>
+        <div>
+          <dt>Engine habit</dt>
+          <dd>Use for transform-heavy frames, then rebuild when trace cost or overlap drifts.</dd>
+        </div>
+      </dl>
     </article>
   </div>
 
   <div class="rt-update-note">
-    <strong>Baseline:</strong>
-    refit/update can reduce build work, but the maintained object is still one top-level structure.
+    <strong>Baseline limit:</strong>
+    rebuild and refit move cost between building and traversal, but the maintained unit is still one broad TLAS.
   </div>
 </section>
 
@@ -107,16 +133,32 @@
   font-size:.8em;
   line-height:1.48;
 }
-.rt-update-card ul{
+.rt-update-card dl{
   margin:0;
-  padding-left:1em;
-  opacity:.72;
-  font-size:.78em;
-  line-height:1.5;
+  display:grid;
+  gap:.45em;
 }
-.rt-update-card li{margin:.2em 0}
-.rt-update-card.rebuild li::marker{color:var(--ds-warn)}
-.rt-update-card.refit li::marker{color:var(--ds-info)}
+.rt-update-card dl div{
+  padding:.46em .5em;
+  border-radius:.42rem;
+  background:color-mix(in srgb,currentColor 4%,transparent);
+}
+:is(.dark,.scheme-congo) .rt-update-card dl div{background:rgba(255,255,255,.035)}
+.rt-update-card dt{
+  margin:0 0 .14em;
+  opacity:.58;
+  font-family:ui-monospace,SFMono-Regular,monospace;
+  font-size:.64em;
+  font-weight:700;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+.rt-update-card dd{
+  margin:0;
+  opacity:.76;
+  font-size:.76em;
+  line-height:1.45;
+}
 .rt-update-note{
   margin:.6em 0 0;
   padding:.55em .7em;
