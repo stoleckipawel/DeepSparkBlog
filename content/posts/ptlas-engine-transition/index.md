@@ -48,32 +48,35 @@ Instance records still reference BLAS objects, and rays still traverse a top-lev
 
 ## Measurement Workload
 
-The captured workload is large enough to separate scene size from changed work: `169,231` dynamic domino instances, `1,220,175` static board objects, `1,389,406` instances total, and a `50 x 50` partition grid.
+The captured workload keeps scene size fixed and lets motion vary over time:
 
-Scene size stays fixed while the toppling wave creates high, mid, and low changed-instance bands. The relevant measurements are top-level update time, render time, acceleration-structure memory, scratch memory, and the size of the moving set.
+- `1,389,406` total instances
+- `169,231` dynamic domino instances
+- `1,220,175` static board objects
+- `50 x 50` partition grid
+
+That creates the condition PTLAS is meant to exploit: high-motion bands report about `15.6k` changed instances, while low-motion bands report about `1.7k`.
 
 ### Evidence Snapshot
 
-The PTLAS claim tested here is narrow: when only part of the scene changes, top-level maintenance can be measured against the changed set instead of only against full scene size.
+The regular TLAS refit row anchors the sample: same scene, same window layout, PTLAS disabled, refit enabled. The PTLAS rows are wider motion-window captures, so they show update behavior over sparse-to-dense movement, not a matched head-to-head speed ranking.
 
-| Claim to test | Captured result | Safe reading |
-|---|---|---|
-| Scene scale and changed work can differ by orders of magnitude. | High-motion PTLAS bands report about `15.6k` changed instances, around `1.12%` of the `1.389M` instance scene. Low-motion bands report about `1.7k`, around `0.12%`. | The workload separates full scene size from moving-set size. |
-| PTLAS update work falls as motion becomes sparse in this run. | Across local, global, and hybrid policies, top-level update average drops from about `1.31 ms` in high motion to about `0.75 ms` in low motion. | Update time tracks the moving set over this capture window. |
-| Policy affects traversal-side cost too. | Average render time differs by policy: local `1.270 ms`, hybrid `1.291 ms`, global `1.407 ms`. | Update timing alone is incomplete; partition policy must be judged with render timing beside it. |
-| PTLAS is not a free-memory replacement for TLAS. | TLAS uses `285.68 MB` AS memory and `103.97 MB` scratch. PTLAS uses `320.18 MB` AS memory and `110.24 MB` scratch. | PTLAS changes maintenance granularity, while memory and scratch remain part of the tradeoff. |
+| Path | Changed instances | Top-level update | Render avg | AS memory / scratch |
+|---|---:|---:|---:|---:|
+| Classic TLAS refit | `4,011-5,084` | `0.670 ms` avg, `0.656-0.706 ms` range | `1.198 ms` | `285.68 MB / 103.97 MB` |
+| PTLAS local partition | `760-16,157` | `1.042 ms` avg, `0.647-1.393 ms` range | `1.270 ms` | `320.18 MB / 110.24 MB` |
+| PTLAS global role | `760-16,141` | `1.059 ms` avg, `0.688-1.364 ms` range | `1.407 ms` | `320.18 MB / 110.24 MB` |
+| PTLAS hybrid distance | `788-16,132` | `1.060 ms` avg, `0.637-1.383 ms` range | `1.291 ms` | `320.18 MB / 110.24 MB` |
 
-| PTLAS policy | High motion update | Mid motion update | Low motion update |
+Within the PTLAS captures, top-level update time drops with the moving set: about `1.31 ms` in high motion and about `0.75 ms` in low motion, a roughly `43%` drop across all three policies.
+
+| PTLAS policy | High motion | Mid motion | Low motion |
 |---|---:|---:|---:|
 | Local partition | `1.320 ms` at `15,648` changed | `1.053 ms` at `9,358` changed | `0.751 ms` at `1,707` changed |
 | Global partition | `1.302 ms` at `15,584` changed | `1.119 ms` at `9,468` changed | `0.738 ms` at `1,721` changed |
 | Hybrid distance `100.000` | `1.313 ms` at `15,609` changed | `1.102 ms` at `9,490` changed | `0.752 ms` at `1,765` changed |
 
-From high to low motion, the PTLAS update average drops by about `43%` in all three policies. The point is the relationship between moving-set size and top-level update time, not an unconditional TLAS-versus-PTLAS speed claim.
-
 This capture records changed instances, update time, render time, memory, and scratch. It does not report touched partitions, rewritten instances, global-partition population, or native operation count.
-
-The classic TLAS refit baseline remains relevant, but not as a headline timing comparison from this dataset. Its captured update range was narrow, `0.656-0.706 ms`, over a much smaller changed-instance window of `4,011-5,084`. A direct TLAS-versus-PTLAS timing claim needs matched motion windows and backend command-scope counters.
 
 ## Update Policy Tradeoffs
 
@@ -92,28 +95,6 @@ The implementation path is easiest to audit at the backend operation pack. Earli
 {{< ptlas-cpu-gpu-split >}}
 
 Sparse update authoring can happen on the CPU or GPU. The boundary to verify is the native operation pack: changed-instance records and touched partitions either remain compact there, or the backend receives broad top-level writes.
-
-## Evidence And Remaining Gaps
-
-The measurements above cover the visible sample workload, update timings, render timings, memory, and scratch. They do not yet prove the exact scope of backend build/update commands.
-
-| Evidence checkpoint | Covered here | Still missing |
-|---|---|---|
-| Frame strategy | Classic TLAS refit and three PTLAS policies measured on one scene. | Repeat with engine captures and fixed camera paths. |
-| Partition planning | Local, global, and hybrid policy modes measured separately. | Export partition occupancy and migration counts per frame. |
-| Logical update stream | `Updated instances` measured beside update and render timings. | Track rewritten-instance count beside changed-instance count. |
-| Native operation pack | Identified as the next boundary to audit. | Break down native op type, op count, and touched partitions. |
-| Runtime evidence | Screenshots and CSV-backed averages exist for the sample. | Store runtime config with every engine evidence bundle. |
-
-The missing evidence is backend command scope. Engine-side update records may be sparse while the backend packet still covers more top-level state than the changed instances and touched partitions require.
-
-Measurement checklist:
-
-- changed-instance count
-- rewritten-instance count
-- touched-partition count
-- native operation type and count
-- global partition population
 
 ## Discussion
 
